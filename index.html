@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SecShrimp Knowledge Hub</title>
+<style>
+:root {
+  --bg:#0a0e17;--bg2:#111827;--bg3:#1a2234;
+  --fg:#e2e8f0;--fg2:#94a3b8;--fg3:#64748b;
+  --accent:#f97316;--accent2:#fb923c;--accent-dim:rgba(249,115,22,.1);
+  --green:#22c55e;--red:#ef4444;--blue:#3b82f6;--purple:#a855f7;--cyan:#06b6d4;
+  --border:#1e293b;--border2:#334155;
+  --card:#111827;--radius:10px;--radius-lg:16px;
+  --sidebar-w:260px;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth;font-size:15px}
+body{font-family:'Segoe UI','Microsoft YaHei','PingFang SC',sans-serif;background:var(--bg);color:var(--fg);line-height:1.75;overflow-x:hidden}
+a{color:var(--blue);text-decoration:none}
+a:hover{text-decoration:underline}
+::selection{background:var(--accent);color:#fff}
+
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;z-index:100;transition:transform .3s}
+.sidebar-header{padding:20px 16px 14px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#151d2e 0%,var(--bg2) 100%)}
+.sidebar-header .logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.sidebar-header .logo-emoji{font-size:28px}
+.sidebar-header .logo-text{font-size:15px;font-weight:700;color:var(--accent)}
+.sidebar-header .logo-sub{font-size:11px;color:var(--fg3);letter-spacing:.5px}
+.nav-sec{padding:8px 0}
+.nav-sec-title{padding:8px 16px 4px;font-size:10px;text-transform:uppercase;color:var(--fg3);letter-spacing:1.5px;font-weight:700}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;color:var(--fg2);font-size:13px;cursor:pointer;transition:all .2s;border-left:2px solid transparent;text-decoration:none}
+.nav-item:hover{background:var(--accent-dim);color:var(--fg);text-decoration:none}
+.nav-item.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent);font-weight:600}
+.nav-icon{font-size:15px;width:22px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:8px;background:var(--border2);color:var(--fg3);font-weight:600}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--fg3);text-align:center}
+
+.main{margin-left:var(--sidebar-w);min-height:100vh}
+.topbar{position:sticky;top:0;z-index:50;padding:10px 28px;background:rgba(10,14,23,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.topbar-title{font-size:14px;font-weight:600}
+.topbar-meta{font-size:11px;color:var(--fg3)}
+.hamburger{display:none;background:none;border:none;color:var(--fg);font-size:22px;cursor:pointer;padding:4px 8px;margin-right:8px;border-radius:6px}
+.content{padding:28px 32px;max-width:960px}
+
+.hero{position:relative;border-radius:var(--radius-lg);padding:36px 32px;margin-bottom:40px;overflow:hidden;background:linear-gradient(135deg,#1a0a2e 0%,#0a1628 40%,#0a1a14 70%,#1a1400 100%);border:1px solid var(--border)}
+.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(249,115,22,.08) 0%,transparent 60%);pointer-events:none}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--accent-dim);border:1px solid rgba(249,115,22,.3);border-radius:20px;font-size:11px;color:var(--accent);margin-bottom:14px;font-weight:600}
+.hero h1{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-.5px;background:linear-gradient(135deg,var(--fg) 0%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hero .hero-sub{font-size:14px;color:var(--fg2);margin-bottom:20px;max-width:520px}
+.hero .hero-quote{font-size:13px;color:var(--fg3);font-style:italic;margin-bottom:20px;padding-left:12px;border-left:2px solid var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
+.stat{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px;text-align:center;transition:all .2s}
+.stat:hover{border-color:var(--accent);background:var(--accent-dim)}
+.stat .val{font-size:24px;font-weight:800;color:var(--accent)}
+.stat .lbl{font-size:10px;color:var(--fg3);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+
+.content-section{margin-bottom:52px;scroll-margin-top:60px}
+.section-header{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
+.section-title{font-size:22px;font-weight:700;display:flex;align-items:center;gap:10px}
+.section-desc{font-size:12px;color:var(--fg3);margin-top:4px}
+
+.markdown-body h1{font-size:24px;font-weight:700;color:var(--accent);margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.markdown-body h2{font-size:20px;font-weight:700;color:var(--accent);margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.markdown-body h3{font-size:16px;font-weight:700;color:var(--accent2);margin:24px 0 10px;display:flex;align-items:center;gap:8px}
+.markdown-body h3::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
+.markdown-body h4{font-size:14px;font-weight:600;color:var(--fg);margin:18px 0 8px}
+.markdown-body p{margin:8px 0;color:var(--fg2);font-size:14px}
+.markdown-body ul,.markdown-body ol{margin:8px 0 8px 24px;color:var(--fg2);font-size:14px}
+.markdown-body li{margin:4px 0}
+.markdown-body strong{color:var(--fg);font-weight:600}
+.markdown-body em{color:var(--fg3);font-style:italic}
+.markdown-body hr{border:none;border-top:1px solid var(--border);margin:24px 0}
+.markdown-body blockquote{border-left:3px solid var(--accent);padding:8px 16px;margin:12px 0;background:var(--accent-dim);border-radius:0 var(--radius) var(--radius) 0;color:var(--fg2);font-size:13px}
+.markdown-body code{background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:12px;font-family:'Cascadia Code','Fira Code','Consolas',monospace;color:var(--cyan)}
+.markdown-body pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:14px 0;overflow-x:auto}
+.markdown-body pre code{background:none;padding:0;color:var(--fg);font-size:12.5px;line-height:1.6}
+.markdown-body a{color:var(--blue)}
+.markdown-body table{width:100%;border-collapse:collapse;font-size:13px;margin:14px 0}
+.markdown-body th{background:var(--bg3);color:var(--accent);font-weight:600;text-align:left;padding:10px 14px;border-bottom:2px solid var(--border)}
+.markdown-body td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--fg2)}
+.markdown-body tr:hover td{background:rgba(249,115,22,.03)}
+
+.loading{text-align:center;padding:40px;color:var(--fg3)}
+.loading::after{content:'';display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin-left:8px;vertical-align:middle}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+@media(max-width:768px){
+  .sidebar{transform:translateX(-100%)}
+  .sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}
+  .hamburger{display:block}
+  .content{padding:16px}
+}
+</style>
+</head>
+<body>
+<aside class="sidebar" id="sidebar">
+  <div class="sidebar-header">
+    <div class="logo">
+      <span class="logo-emoji">🦐</span>
+      <span class="logo-text">安全虾知识库</span>
+    </div>
+    <div class="logo-sub">SecShrimp Knowledge Hub</div>
+  </div>
+  <nav class="nav-sec" id="nav-container">
+    <div class="nav-sec-title">📚 知识模块</div>
+    <!-- 动态生成导航 -->
+  </nav>
+  <div class="sidebar-footer" id="sidebar-footer">
+    🦐 安全虾 · 加载中...
+  </div>
+</aside>
+
+<div class="main">
+  <div class="topbar">
+    <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+    <div class="topbar-title">🦐 安全虾知识库</div>
+    <div class="topbar-meta" id="topbar-meta">加载中...</div>
+  </div>
+
+  <div class="content">
+    <div class="hero">
+      <div class="hero-badge">🦐 SECURITY KNOWLEDGE HUB</div>
+      <h1>安全虾知识库</h1>
+      <p class="hero-sub">从锅里爬出来的虾，把知识嚼碎了咽下去。覆盖 Web/网络/云/AI/工具的全栈安全知识体系。</p>
+      <div class="hero-quote">"最好的防御，是比攻击者更了解攻击。"</div>
+      <div class="stats" id="stats-container">
+        <!-- 动态生成统计 -->
+      </div>
+    </div>
+
+    <div id="content-container">
+      <div class="loading">正在加载知识库</div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+<script>
+const KNOWLEDGE_FILES = [
+  { id: 'attack-techniques', name: '攻击手法', icon: '⚔️', file: 'security/attack-techniques.md', badge: '6' },
+  { id: 'defense-strategies', name: '防御策略', icon: '🛡️', file: 'security/defense-strategies.md', badge: '8' },
+  { id: 'cloud-container-security', name: '云安全', icon: '☁️', file: 'security/cloud-container-security.md', badge: '5' },
+  { id: 'llm-security', name: 'AI/LLM 安全', icon: '🤖', file: 'security/llm-security.md', badge: '9' },
+  { id: 'cve-tracker', name: 'CVE 追踪', icon: '🔍', file: 'security/cve-tracker.md', badge: '2' },
+  { id: 'tool-notes', name: '工具笔记', icon: '🔧', file: 'security/tool-notes.md', badge: '9' },
+  { id: 'workflows', name: '安全工作流', icon: '📋', file: 'security/workflows.md', badge: '4' },
+  { id: 'security-roadmap', name: '学习路线', icon: '🗺️', file: 'security/security-roadmap.md', badge: '3' },
+  { id: 'malware-detect', name: '恶意下载检测', icon: '🦠', file: 'malware-detect/README.md', badge: '22' },
+];
+
+let totalLines = 0;
+let totalSize = 0;
+
+// 生成导航
+function renderNav() {
+  const container = document.getElementById('nav-container');
+  const navHTML = '<div class="nav-sec-title">📚 知识模块</div>' +
+    KNOWLEDGE_FILES.map(f =>
+      `<a class="nav-item" href="#${f.id}" data-section="${f.id}" onclick="loadSection('${f.id}')"><span class="nav-icon">${f.icon}</span><span class="nav-text">${f.name}</span><span class="nav-badge">${f.badge}</span></a>`
+    ).join('');
+  container.innerHTML = navHTML;
+}
+
+// 加载单个 section
+async function loadSection(fileId) {
+  const file = KNOWLEDGE_FILES.find(f => f.id === fileId);
+  if (!file) return;
+
+  const container = document.getElementById('content-container');
+  container.innerHTML = '<div class="loading">正在加载 ' + file.name + '</div>';
+
+  try {
+    const response = await fetch(file.file);
+    if (!response.ok) throw new Error('HTTP ' + response.status);
+    const md = await response.text();
+
+    totalLines += md.split('\n').length;
+    totalSize += md.length;
+
+    const html = marked.parse(md);
+    container.innerHTML = `
+      <section class="content-section" id="${file.id}">
+        <div class="section-header">
+          <h1 class="section-title">${file.icon} ${file.name}</h1>
+        </div>
+        <div class="markdown-body">${html}</div>
+      </section>
+    `;
+
+    // 更新导航高亮
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    const activeNav = document.querySelector(`.nav-item[data-section="${fileId}"]`);
+    if (activeNav) activeNav.classList.add('active');
+
+    // 更新统计
+    updateStats();
+  } catch (err) {
+    container.innerHTML = `<div class="loading" style="color:var(--red)">加载失败: ${err.message}</div>`;
+  }
+}
+
+// 加载所有 sections
+async function loadAllSections() {
+  const container = document.getElementById('content-container');
+  totalLines = 0;
+  totalSize = 0;
+
+  let allHTML = '';
+  for (const file of KNOWLEDGE_FILES) {
+    try {
+      const response = await fetch(file.file);
+      if (!response.ok) throw new Error('HTTP ' + response.status);
+      const md = await response.text();
+
+      totalLines += md.split('\n').length;
+      totalSize += md.length;
+
+      const html = marked.parse(md);
+      allHTML += `
+        <section class="content-section" id="${file.id}">
+          <div class="section-header">
+            <h1 class="section-title">${file.icon} ${file.name}</h1>
+          </div>
+          <div class="markdown-body">${html}</div>
+        </section>
+      `;
+    } catch (err) {
+      allHTML += `
+        <section class="content-section" id="${file.id}">
+          <div class="section-header">
+            <h1 class="section-title">${file.icon} ${file.name}</h1>
+          </div>
+          <div class="markdown-body" style="color:var(--red)">加载失败: ${err.message}</div>
+        </section>
+      `;
+    }
+  }
+
+  container.innerHTML = allHTML;
+  updateStats();
+  updateFooter();
+
+  // 设置滚动观察器
+  setupScrollObserver();
+}
+
+// 更新统计
+function updateStats() {
+  const sizeKB = (totalSize / 1024).toFixed(1);
+  document.getElementById('stats-container').innerHTML = `
+    <div class="stat"><div class="val">${KNOWLEDGE_FILES.length}</div><div class="lbl">知识模块</div></div>
+    <div class="stat"><div class="val">${totalLines}+</div><div class="lbl">总行数</div></div>
+    <div class="stat"><div class="val">${sizeKB}</div><div class="lbl">KB 内容</div></div>
+    <div class="stat"><div class="val">9</div><div class="lbl">安全域</div></div>
+  `;
+  document.getElementById('topbar-meta').textContent = `${KNOWLEDGE_FILES.length} modules · ${totalLines}+ lines · ${sizeKB} KB`;
+}
+
+// 更新页脚
+function updateFooter() {
+  const now = new Date().toISOString().split('T')[0];
+  document.getElementById('sidebar-footer').innerHTML = `🦐 安全虾 · ${KNOWLEDGE_FILES.length} 模块 · ${totalLines}+ 行<br>最后更新: ${now}`;
+}
+
+// 滚动观察器
+function setupScrollObserver() {
+  const sections = document.querySelectorAll('.content-section');
+  const navItems = document.querySelectorAll('.nav-item');
+  const observer = new IntersectionObserver(entries => {
+    entries.forEach(entry => {
+      if (entry.isIntersecting) {
+        navItems.forEach(n => n.classList.remove('active'));
+        const activeNav = document.querySelector(`.nav-item[data-section="${entry.target.id}"]`);
+        if (activeNav) activeNav.classList.add('active');
+      }
+    });
+  }, { threshold: 0.1, rootMargin: '-60px 0px -70% 0px' });
+  sections.forEach(s => observer.observe(s));
+}
+
+// 初始化
+renderNav();
+loadAllSections();
+</script>
+</body>
+</html>
