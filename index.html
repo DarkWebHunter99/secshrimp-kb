@@ -104,7 +104,6 @@ a:hover{text-decoration:underline}
     <div class="logo-sub">SecShrimp Knowledge Hub</div>
   </div>
   <nav class="nav-sec" id="nav-container">
-    <div class="nav-sec-title">📚 知识模块</div>
     <!-- 动态生成导航 -->
   </nav>
   <div class="sidebar-footer" id="sidebar-footer">
@@ -138,16 +137,21 @@ a:hover{text-decoration:underline}
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
+// 知识库文件配置
 const KNOWLEDGE_FILES = [
-  { id: 'attack-techniques', name: '攻击手法', icon: '⚔️', file: 'security/attack-techniques.md', badge: '6' },
-  { id: 'defense-strategies', name: '防御策略', icon: '🛡️', file: 'security/defense-strategies.md', badge: '8' },
-  { id: 'cloud-container-security', name: '云安全', icon: '☁️', file: 'security/cloud-container-security.md', badge: '5' },
-  { id: 'llm-security', name: 'AI/LLM 安全', icon: '🤖', file: 'security/llm-security.md', badge: '9' },
-  { id: 'cve-tracker', name: 'CVE 追踪', icon: '🔍', file: 'security/cve-tracker.md', badge: '2' },
-  { id: 'tool-notes', name: '工具笔记', icon: '🔧', file: 'security/tool-notes.md', badge: '9' },
-  { id: 'workflows', name: '安全工作流', icon: '📋', file: 'security/workflows.md', badge: '4' },
-  { id: 'security-roadmap', name: '学习路线', icon: '🗺️', file: 'security/security-roadmap.md', badge: '3' },
-  { id: 'malware-detect', name: '恶意下载检测', icon: '🦠', file: 'malware-detect/README.md', badge: '22' },
+  // 安全虾知识
+  { id: 'secshrimp-attack', name: '攻击手法', icon: '⚔️', file: 'secshrimp/attack-techniques.md', badge: '6', section: 'secshrimp' },
+  { id: 'secshrimp-defense', name: '防御策略', icon: '🛡️', file: 'secshrimp/defense-strategies.md', badge: '8', section: 'secshrimp' },
+  { id: 'secshrimp-cloud', name: '云安全', icon: '☁️', file: 'secshrimp/cloud-container-security.md', badge: '5', section: 'secshrimp' },
+  { id: 'secshrimp-ai', name: 'AI/LLM 安全', icon: '🤖', file: 'secshrimp/llm-security.md', badge: '9', section: 'secshrimp' },
+  { id: 'secshrimp-cve', name: 'CVE 追踪', icon: '🔍', file: 'secshrimp/cve-tracker.md', badge: '2', section: 'secshrimp' },
+  { id: 'secshrimp-tools', name: '工具笔记', icon: '🔧', file: 'secshrimp/tool-notes.md', badge: '9', section: 'secshrimp' },
+  { id: 'secshrimp-workflows', name: '安全工作流', icon: '📋', file: 'secshrimp/workflows.md', badge: '4', section: 'secshrimp' },
+  { id: 'secshrimp-roadmap', name: '学习路线', icon: '🗺️', file: 'secshrimp/security-roadmap.md', badge: '3', section: 'secshrimp' },
+  // 代码虾知识
+  { id: 'codeshrimp-roadmap', name: '进化路线图', icon: '📊', file: 'codeshrimp/coder-roadmap.md', badge: '30+', section: 'codeshrimp' },
+  // 共享知识
+  { id: 'shared-malware', name: '恶意下载检测', icon: '🦠', file: 'shared/malware-detect/README.md', badge: '22', section: 'shared' },
 ];
 
 let totalLines = 0;
@@ -156,10 +160,27 @@ let totalSize = 0;
 // 生成导航
 function renderNav() {
   const container = document.getElementById('nav-container');
-  const navHTML = '<div class="nav-sec-title">📚 知识模块</div>' +
-    KNOWLEDGE_FILES.map(f =>
+
+  // 按 section 分组
+  const sections = {
+    secshrimp: { title: '🦐 安全虾知识', items: [] },
+    codeshrimp: { title: '💻 代码虾知识', items: [] },
+    shared: { title: '🔗 共享知识', items: [] },
+  };
+
+  KNOWLEDGE_FILES.forEach(f => {
+    sections[f.section].items.push(f);
+  });
+
+  let navHTML = '';
+  for (const [key, sec] of Object.entries(sections)) {
+    if (sec.items.length === 0) continue;
+    navHTML += `<div class="nav-sec-title">${sec.title}</div>`;
+    navHTML += sec.items.map(f =>
       `<a class="nav-item" href="#${f.id}" data-section="${f.id}" onclick="loadSection('${f.id}')"><span class="nav-icon">${f.icon}</span><span class="nav-text">${f.name}</span><span class="nav-badge">${f.badge}</span></a>`
     ).join('');
+  }
+
   container.innerHTML = navHTML;
 }
 
@@ -207,34 +228,52 @@ async function loadAllSections() {
   totalLines = 0;
   totalSize = 0;
 
+  // 按 section 分组加载
+  const sections = {
+    secshrimp: { title: '🦐 安全虾知识', icon: '🦐', items: [] },
+    codeshrimp: { title: '💻 代码虾知识', icon: '💻', items: [] },
+    shared: { title: '🔗 共享知识', icon: '🔗', items: [] },
+  };
+
+  KNOWLEDGE_FILES.forEach(f => {
+    sections[f.section].items.push(f);
+  });
+
   let allHTML = '';
-  for (const file of KNOWLEDGE_FILES) {
-    try {
-      const response = await fetch(file.file);
-      if (!response.ok) throw new Error('HTTP ' + response.status);
-      const md = await response.text();
 
-      totalLines += md.split('\n').length;
-      totalSize += md.length;
+  for (const [key, sec] of Object.entries(sections)) {
+    if (sec.items.length === 0) continue;
 
-      const html = marked.parse(md);
-      allHTML += `
-        <section class="content-section" id="${file.id}">
-          <div class="section-header">
-            <h1 class="section-title">${file.icon} ${file.name}</h1>
-          </div>
-          <div class="markdown-body">${html}</div>
-        </section>
-      `;
-    } catch (err) {
-      allHTML += `
-        <section class="content-section" id="${file.id}">
-          <div class="section-header">
-            <h1 class="section-title">${file.icon} ${file.name}</h1>
-          </div>
-          <div class="markdown-body" style="color:var(--red)">加载失败: ${err.message}</div>
-        </section>
-      `;
+    allHTML += `<div class="section-header"><h1 class="section-title">${sec.title}</h1></div>`;
+
+    for (const file of sec.items) {
+      try {
+        const response = await fetch(file.file);
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const md = await response.text();
+
+        totalLines += md.split('\n').length;
+        totalSize += md.length;
+
+        const html = marked.parse(md);
+        allHTML += `
+          <section class="content-section" id="${file.id}">
+            <div class="section-header">
+              <h2 class="section-title">${file.icon} ${file.name}</h2>
+            </div>
+            <div class="markdown-body">${html}</div>
+          </section>
+        `;
+      } catch (err) {
+        allHTML += `
+          <section class="content-section" id="${file.id}">
+            <div class="section-header">
+              <h2 class="section-title">${file.icon} ${file.name}</h2>
+            </div>
+            <div class="markdown-body" style="color:var(--red)">加载失败: ${err.message}</div>
+          </section>
+        `;
+      }
     }
   }
 
@@ -253,7 +292,7 @@ function updateStats() {
     <div class="stat"><div class="val">${KNOWLEDGE_FILES.length}</div><div class="lbl">知识模块</div></div>
     <div class="stat"><div class="val">${totalLines}+</div><div class="lbl">总行数</div></div>
     <div class="stat"><div class="val">${sizeKB}</div><div class="lbl">KB 内容</div></div>
-    <div class="stat"><div class="val">9</div><div class="lbl">安全域</div></div>
+    <div class="stat"><div class="val">3</div><div class="lbl">知识分区</div></div>
   `;
   document.getElementById('topbar-meta').textContent = `${KNOWLEDGE_FILES.length} modules · ${totalLines}+ lines · ${sizeKB} KB`;
 }

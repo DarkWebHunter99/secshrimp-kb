@@ -1,0 +1,381 @@
+# ============================================================
+# MITRE ATT&CK T1558 — Kerberos 攻击检测
+# ============================================================
+# Technique: T1558 - Steal or Forge Kerberos Tickets
+# Platform: Windows (Active Directory)
+# Tactics: Credential Access, Defense Evasion, Lateral Movement
+# Covers: Kerberoasting / AS-REP Roasting / Golden Ticket / Silver Ticket
+# ============================================================
+
+title: Kerberos Attack Detection Suite
+id: d4e5f6a7-t1558-000-000
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 Kerberos 协议相关攻击，包括 Kerberoasting、AS-REP Roasting、
+  Golden Ticket 和 Silver Ticket。这些攻击利用 Kerberos 认证机制
+  窃取凭据或伪造票据，是 Active Directory 环境中最常见的攻击向量。
+
+---
+
+# ============================================================
+# 1. Kerberoasting — SPN 扫描与 TGS 请求
+# ============================================================
+# T1558.003 — Kerberoasting
+# 攻击者请求 Service Principal Name (SPN) 对应的 TGS 票据，
+# 使用离线工具（hashcat/John）破解服务账户密码。
+
+title: Kerberoasting — RC4 Encrypted TGS Request
+id: d4e5f6a7-t1558-003-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测使用 RC4 (0x17) 加密类型的 TGS 请求。
+  Kerberoasting 工具（Rubeus、GetUserSPNs）默认请求 RC4 加密的 TGS，
+  因为 RC4 比 AES 更容易离线破解。
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketEncryptionType: '0x17'
+  filter_service:
+    # 排除已知合法服务账户
+    TargetUserName|endswith:
+      - '$'  # 计算机账户
+  condition: selection and not filter_service
+falsepositives:
+  - 使用 RC4 的旧版应用（兼容性模式）
+  - 某些打印服务使用 RC4
+level: high
+---
+
+title: Kerberoasting — Multiple TGS Requests in Short Timeframe
+id: d4e5f6a7-t1558-003-002
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测短时间内大量 TGS 请求。正常用户很少在短时间内请求
+  多个不同服务的 TGS，这是 Kerberoasting 扫描的典型行为。
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+  condition: selection
+  timeframe: 60s
+  threshold:
+    type threshold
+    track: by_user
+    count: 10
+    seconds: 60
+falsepositives:
+  - 服务账户批量调用微服务
+  - 应用启动时预加载票据
+level: medium
+---
+
+title: Kerberoasting — Request for AES-Encrypted TGS
+id: d4e5f6a7-t1558-003-003
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测请求 AES (0x11/0x12) 加密 TGS 的行为。
+  现代 Kerberoasting 工具（如 Rubeus AES 模式）支持 AES 破解，
+  AES-256 (0x12) 比 RC4 更安全但仍可被暴力破解。
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketEncryptionType:
+      - '0x11'  # AES128
+      - '0x12'  # AES256
+  filter_computer:
+    TargetUserName|endswith: '$'
+  condition: selection and not filter_computer
+falsepositives:
+  - 合法服务使用 AES 加密票据
+level: low
+---
+
+# ============================================================
+# 2. AS-REP Roasting — 无预认证账户探测
+# ============================================================
+# T1558.004 — AS-REP Roasting
+# 攻击者寻找不需要 Kerberos 预认证的账户，
+# 直接请求 AS-REP 获取离线可破解的票据。
+
+title: AS-REP Roasting — Pre-Authentication Not Required
+id: d4e5f6a7-t1558-004-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测对不需要预认证账户的 AS-REP 请求。
+  Event ID 4768 中 Pre-Authentication Type=0 表示不需要预认证，
+  这些账户是 AS-REP Roasting 的目标。
+tags:
+  - attack.credential_access
+  - attack.t1558.004
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4768
+    PreAuthentationType: '0x0'
+  filter_computer:
+    TargetUserName|endswith: '$'
+  condition: selection and not filter_computer
+falsepositives:
+  - 合法禁用预认证的账户（极少见）
+level: high
+---
+
+title: AS-REP Roasting — Multiple AS-REP Requests
+id: d4e5f6a7-t1558-004-002
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测短时间内大量 AS-REP 请求。
+  攻击者使用 tools\ASREPRoast 等工具枚举无预认证账户。
+tags:
+  - attack.credential_access
+  - attack.t1558.004
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4768
+  condition: selection
+  timeframe: 60s
+  threshold:
+    type threshold
+    track: by_src_ip
+    count: 20
+    seconds: 60
+falsepositives:
+  - 大量用户同时登录
+level: medium
+---
+
+# ============================================================
+# 3. Golden Ticket — 伪造 TGT
+# ============================================================
+# T1558.001 — Golden Ticket
+# 攻击者使用 Kerberos krbtgt 账户的 NTLM 哈希
+# 伪造任意用户的 TGT，实现持久化和域内任意访问。
+
+title: Golden Ticket — Suspicious TGT from Non-DC
+id: d4e5f6a7-t1558-001-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测来自非域控制器的 TGT 请求。Golden Ticket 伪造的 TGT
+  在续期时可能产生异常事件。当 TGT 来源不是已知 DC 时触发告警。
+tags:
+  - attack.credential_access
+  - attack.defense_evasion
+  - attack.t1558.001
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4768
+    TicketEncryptionType: '0x17'
+  filter_dc:
+    # 排除已知域控制器
+    IpAddress|startswith:
+      - '10.0.0.'    # 示例 DC 网段
+      - '192.168.1.' # 示例 DC 网段
+  condition: selection and not filter_dc
+falsepositives:
+  - 非 DC 服务器上的 Kerberos 客户端
+level: high
+---
+
+title: Golden Ticket — Anomalous Ticket Lifetime
+id: d4e5f6a7-t1558-001-002
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测异常长的 TGT 生命周期。Golden Ticket 通常设置超长有效期
+  （如 10 年），而正常 TGT 默认 10 小时。
+tags:
+  - attack.credential_access
+  - attack.defense_evasion
+  - attack.t1558.001
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketEncryptionType: '0x17'
+  # 注：需配合 SIEM 自定义字段解析 TicketLifetime
+  # 正常 TGT: 600 (10h), 异常: >86400 (24h+)
+  condition: selection
+falsepositives:
+  - 特殊配置的长生命周期票据
+level: medium
+---
+
+# ============================================================
+# 4. Silver Ticket — 伪造 TGS
+# ============================================================
+# T1558.002 — Silver Ticket
+# 攻击者使用服务账户的 NTLM 哈希伪造 TGS，
+# 无需通过 DC 认证即可访问特定服务。
+
+title: Silver Ticket — TGS Without Corresponding TGT
+id: d4e5f6a7-t1558-002-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 TGS 请求但没有对应 TGT 的情况。
+  Silver Ticket 伪造的 TGS 绕过了 TGT 验证，
+  可能表现为 TGS 请求但无前置 TGT 事件。
+tags:
+  - attack.credential_access
+  - attack.lateral_movement
+  - attack.t1558.002
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_tgs:
+    EventID: 4769
+  # 注：需配合 SIEM 关联分析
+  # 在 4769 之前 5 分钟内无对应 4768 (TGT)
+  condition: selection_tgs
+falsepositives:
+  - 票据缓存命中（跳过 TGT 请求）
+level: medium
+---
+
+# ============================================================
+# 5. Kerberos 加密降级攻击
+# ============================================================
+# T1558 — 加密降级
+# 攻击者强制使用弱加密类型（RC4）以便离线破解。
+
+title: Kerberos Encryption Downgrade to RC4
+id: d4e5f6a7-t1558-000-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 Kerberos 加密降级到 RC4 的行为。
+  正常环境中 AES 应为默认加密类型，
+  大量 RC4 请求可能表示降级攻击。
+tags:
+  - attack.credential_access
+  - attack.t1558
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketEncryptionType: '0x17'
+  condition: selection
+  timeframe: 300s
+  threshold:
+    type threshold
+    track: by_user
+    count: 5
+    seconds: 300
+falsepositives:
+  - 旧版应用强制 RC4
+level: medium
+---
+
+# ============================================================
+# 6. Kerberos 认证异常 — 综合检测
+# ============================================================
+
+title: Kerberos Authentication Anomaly — Failed TGT Request
+id: d4e5f6a7-t1558-000-002
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测失败的 TGT 请求（Event ID 4771）。
+  大量失败可能表示密码喷洒或暴力破解。
+tags:
+  - attack.credential_access
+  - attack.t1110
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4771
+  condition: selection
+  timeframe: 300s
+  threshold:
+    type threshold
+    track: by_src_ip
+    count: 20
+    seconds: 300
+falsepositives:
+  - 用户密码过期
+  - 服务账户密码轮换
+level: medium
+---
+
+title: Kerberos — Service Ticket Request for Sensitive Service
+id: d4e5f6a7-t1558-000-003
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测对高价值服务 SPN 的 TGS 请求。
+  攻击者优先 Kerberoasting 高权限服务账户
+  （如 SQL、Exchange、DNS 等）。
+tags:
+  - attack.credential_access
+  - attack.t1558.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4769
+    TicketEncryptionType: '0x17'
+  selection_sensitive:
+    TargetUserName|contains:
+      - 'sql'
+      - 'exchange'
+      - 'dns'
+      - 'crm'
+      - 'admin'
+      - 'svc'
+      - 'backup'
+  condition: selection and selection_sensitive
+falsepositives:
+  - 合法的服务账户调用
+level: high

@@ -1,0 +1,190 @@
+# ============================================================
+# MITRE ATT&CK T1546 — Event Triggered Execution
+# ============================================================
+# Technique: T1546 - Event Triggered Execution
+# Sub-techniques: T1546.002 (Screensaver), T1546.003 (WMI),
+#                 T1546.008 (Accessibility Features),
+#                 T1546.010 (AppInit DLLs),
+#                 T1546.011 (Image File Execution Options),
+#                 T1546.012 (Image File Execution Options - Debugger)
+# Platform: Windows
+# Tactics: Privilege Escalation, Persistence
+# ============================================================
+
+title: Event Triggered Execution - Accessibility Features Hijack
+id: a1b2c3d4-1546-008-001
+status: stable
+description: |
+  Detects persistence via Accessibility Features (T1546.008).
+  Attackers replace or debug accessibility binaries (sethc.exe, utilman.exe,
+  osk.exe, magnify.exe, narrator.exe, displayswitch.exe) to gain SYSTEM
+  access from the login screen.
+references:
+  - https://attack.mitre.org/techniques/T1546/008/
+  - https://www.elastic.co/guide/en/security/current/persistence-via-registry-run-keys.html
+author: CodeShrimp (auto-generated)
+date: 2026/05/08
+tags:
+  - attack.privilege_escalation
+  - attack.persistence
+  - attack.t1546.008
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection_debugger:
+    TargetObject|contains:
+      - 'Microsoft\Windows NT\CurrentVersion\Image File Execution Options\sethc.exe'
+      - 'Microsoft\Windows NT\CurrentVersion\Image File Execution Options\utilman.exe'
+      - 'Microsoft\Windows NT\CurrentVersion\Image File Execution Options\osk.exe'
+      - 'Microsoft\Windows NT\CurrentVersion\Image File Execution Options\magnify.exe'
+      - 'Microsoft\Windows NT\CurrentVersion\Image File Execution Options\narrator.exe'
+      - 'Microsoft\Windows NT\CurrentVersion\Image File Execution Options\displayswitch.exe'
+    Details|contains: 'Debugger'
+  filter_legitimate:
+    Details:
+      - 'C:\Windows\System32\*\*.exe'
+  condition: selection_debugger and not filter_legitimate
+falsepositives:
+  - Legitimate accessibility tool configuration (rare)
+level: high
+
+---
+
+title: WMI Event Subscription Persistence
+id: a1b2c3d4-1546-003-001
+status: stable
+description: |
+  Detects WMI event subscription persistence (T1546.003).
+  Attackers create WMI event filters and consumers to execute
+  malicious code when specific system events occur.
+references:
+  - https://attack.mitre.org/techniques/T1546/003/
+  - https://pentestlab.blog/2020/01/21/persistence-wmi-event-subscription/
+author: CodeShrimp (auto-generated)
+date: 2026/05/08
+tags:
+  - attack.persistence
+  - attack.t1546.003
+logsource:
+  category: wmi_event
+  product: windows
+detection:
+  selection_persistence:
+    EventID:
+      - 5861  # WMI Permanent Event Registration
+      - 5859  # WMI Temporary Event Registration
+  filter_known_good:
+    Query|contains:
+      - 'SELECT * FROM __InstanceModificationEvent WITHIN 60 WHERE TargetInstance ISA "Win32_PerfFormattedData_PerfOS_System"'
+  condition: selection_persistence and not filter_known_good
+falsepositives:
+  - SCCM and other management tools use WMI subscriptions
+  - Monitoring software (SCOM, etc.)
+level: high
+
+---
+
+title: Image File Execution Options - Debugger Injection
+id: a1b2c3d4-1546-012-001
+status: stable
+description: |
+  Detects IFEO debugger injection (T1546.012).
+  Attackers set a debugger on legitimate binaries so that when
+  the binary runs, the debugger (malicious) executes instead.
+references:
+  - https://attack.mitre.org/techniques/T1546/012/
+  - https://www.elastic.co/security-research/detecting-ifoo-persistence
+author: CodeShrimp (auto-generated)
+date: 2026/05/08
+tags:
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1546.012
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection_ifeo_debugger:
+    TargetObject|contains: '\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\'
+    TargetObject|endswith: '\Debugger'
+  filter_system_debuggers:
+    Details|contains:
+      - 'vsjitdebugger.exe'
+      - 'ntsd.exe'
+      - 'cdb.exe'
+      - 'windbg.exe'
+  filter_legitimate_paths:
+    Details|startswith:
+      - 'C:\Program Files\'
+      - 'C:\Program Files (x86)\'
+      - 'C:\Windows\System32\'
+  condition: selection_ifeo_debugger and not filter_system_debuggers and not filter_legitimate_paths
+falsepositives:
+  - Developer machines with Visual Studio installed
+  - Application compatibility shims
+level: high
+
+---
+
+title: AppInit DLLs Persistence
+id: a1b2c3d4-1546-010-001
+status: stable
+description: |
+  Detects AppInit DLLs persistence (T1546.010).
+  Attackers add malicious DLLs to the AppInit_DLLs registry value,
+  which loads into every process that loads User32.dll.
+references:
+  - https://attack.mitre.org/techniques/T1546/010/
+author: CodeShrimp (auto-generated)
+date: 2026/05/08
+tags:
+  - attack.persistence
+  - attack.t1546.010
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection_appinit:
+    TargetObject|contains:
+      - '\Windows NT\CurrentVersion\Windows\AppInit_DLLs'
+    Details|contains:
+      - '.dll'
+  filter_empty:
+    Details: ''
+  condition: selection_appinit and not filter_empty
+falsepositives:
+  - Some enterprise software legitimately uses AppInit DLLs (rare)
+level: critical
+
+---
+
+title: Screensaver Persistence via Registry
+id: a1b2c3d4-1546-002-001
+status: stable
+description: |
+  Detects screensaver persistence (T1546.002).
+  Attackers set a malicious executable as the screensaver to
+  execute code when the screensaver activates.
+references:
+  - https://attack.mitre.org/techniques/T1546/002/
+author: CodeShrimp (auto-generated)
+date: 2026/05/08
+tags:
+  - attack.persistence
+  - attack.t1546.002
+logsource:
+  category: registry_set
+  product: windows
+detection:
+  selection_screensaver:
+    TargetObject|contains:
+      - '\Control Panel\Desktop\SCRNSAVE.EXE'
+  filter_legitimate:
+    Details|startswith:
+      - 'C:\Windows\System32\'
+      - 'C:\Windows\SysWOW64\'
+  condition: selection_screensaver and not filter_legitimate
+falsepositives:
+  - Users setting custom screensavers (verify path)
+level: medium

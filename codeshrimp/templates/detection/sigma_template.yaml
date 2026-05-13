@@ -1,0 +1,78 @@
+# Purpose: Sigma 规则标准模板 — 用于终端攻击检测规则编写
+# Auth: 检测规则可开源共享，但请标注适用场景和误报风险
+# Dependencies: Sigma 规范 >= 2.0, sigmac 转换工具
+# Usage:
+#   1. 复制此模板
+#   2. 替换占位符内容
+#   3. 使用 sigmac 转换为目标 SIEM 查询
+#   sigmac -t elasticsearch -c winlogbeat my_rule.yml
+#   sigmac -t splunk my_rule.yml
+
+title: 检测规则标题（简明描述检测的行为）
+id: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx    # UUID v4
+status: experimental                          # experimental|test|stable
+description: |
+  详细描述检测的攻击行为、攻击者可能的动机、
+  以及该行为在正常环境中的出现频率。
+references:
+  - https://attack.mitre.org/techniques/Txxxx/xxx/
+author: 代码虾 (CodeShrimp)
+date: 2026/04/28
+modified: 2026/04/28
+tags:
+  - attack.tactic_name                       # e.g., attack.execution
+  - attack.txxxx                             # e.g., attack.t1059
+  - attack.txxxx.xxx                         # e.g., attack.t1059.001
+
+# ============================================================
+# 检测逻辑
+# ============================================================
+logsource:
+  product: windows                            # windows|linux|macos|web|proxy|firewall
+  category: process_creation                  # process_creation|registry_event|file_event|network_connection|...
+  # service: security                         # 可选：具体日志服务
+
+detection:
+  selection:
+    # 字段名取决于 logsource，常见字段：
+    # Windows: Image, CommandLine, ParentImage, TargetFilename
+    # Sysmon (EventID 1): Image, CommandLine, ParentImage
+    # PowerShell: EventID, ScriptBlockText
+    # Network: DestinationPort, DestinationHostname, Initiated
+
+    # 示例：检测特定进程
+    # Image|endswith:
+    #   - '\powershell.exe'
+    #   - '\cmd.exe'
+    # CommandLine|contains:
+    #   - '-enc'
+    #   - '-EncodedCommand'
+
+    # TODO: 替换为实际检测条件
+    _placeholder: "TODO"
+
+  filter_legitimate:
+    # 排除已知合法行为，减少误报
+    # Image|startswith:
+    #   - 'C:\Program Files\'
+    #   - 'C:\Windows\System32\'
+
+    # TODO: 添加排除条件
+    _placeholder: "TODO"
+
+  condition: selection and not 1 of filter_*
+
+# ============================================================
+# 级别定义
+# ============================================================
+# informational|low|medium|high|critical
+level: medium
+
+# ============================================================
+# 误报说明
+# ============================================================
+falsepositives:
+  - 描述可能的误报场景 1
+  - 描述可能的误报场景 2
+  # - 管理员使用 PowerShell 远程管理
+  # - 企业自动化脚本

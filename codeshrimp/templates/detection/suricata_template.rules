@@ -1,0 +1,527 @@
+# Purpose: Suricata IDS 规则模板 — 网络层安全检测
+#          覆盖：恶意下载、C2 通信、数据外泄、扫描探测、横向移动、恶意软件通信
+# Auth: 检测规则可开源共享，请标注适用场景和误报风险
+# Dependencies: Suricata >= 6.0, ET Open/Pro 规则集（可选）
+# Usage:
+#   1. 复制此模板
+#   2. 替换占位符内容（$HOME_NET, $EXTERNAL_NET 等）
+#   3. 加载到 Suricata: suricata -c suricata.yaml -S my_rules.rules
+#   4. 测试规则: suricata -T -c suricata.yaml -S my_rules.rules
+
+# ============================================================
+# 网络变量定义（根据实际环境修改）
+# ============================================================
+# 默认配置，使用时请替换为实际网络
+# var:HOME_NET any
+# var:EXTERNAL_NET !$HOME_NET
+# var:HTTP_SERVERS $HOME_NET
+# var:DNS_SERVERS $HOME_NET
+# var:SMTP_SERVERS $HOME_NET
+
+# ============================================================
+# 模块 1: 恶意下载检测
+# ============================================================
+
+# --- 检测 PE 文件下载（通过 HTTP） ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"MALWARE-CNC PE file download via HTTP";
+    flow:established,to_server;
+    content:".exe"; http_uri;
+    content:"GET"; http_method;
+    file_data;
+    content:"MZ"; depth:2;
+    classtype:trojan-activity;
+    sid:2026001; rev:1;
+    metadata:affected_product Windows, attack_target Client_Endpoint, severity high;
+)
+
+# --- 检测 PowerShell 脚本下载 ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"MALWARE-CNC PowerShell script download";
+    flow:established,to_client;
+    file_data;
+    content:".ps1"; nocase; http_uri;
+    content:"powershell"; nocase; http_client_body;
+    classtype:trojan-activity;
+    sid:2026002; rev:1;
+    metadata:affected_product Windows, attack_target Client_Endpoint, severity high;
+)
+
+# --- 检测 CAB/MSI 安装包下载（常用于钓鱼攻击） ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"MALWARE-CNC Suspicious installer download (CAB/MSI)";
+    flow:established,to_client;
+    file_data;
+    content:"MSCF"; depth:4;  # CAB magic bytes
+    classtype:trojan-activity;
+    sid:2026003; rev:1;
+    metadata:attack_target Client_Endpoint, severity medium;
+)
+
+# --- 检测 VBS/JS 脚本下载 ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"MALWARE-CNC Script file download (VBS/JS)";
+    flow:established,to_client;
+    file_data;
+    content:".vbs"; nocase; http_uri;
+    classtype:trojan-activity;
+    sid:2026004; rev:1;
+    metadata:affected_product Windows, attack_target Client_Endpoint, severity high;
+)
+
+# --- 检测从非标准端口下载可执行文件 ---
+alert http $HOME_NET any -> $EXTERNAL_NET !80 (
+    msg:"POLICY-Suspicious executable download from non-standard port";
+    flow:established,to_server;
+    content:".exe"; nocase; http_uri;
+    content:"GET"; http_method;
+    classtype:policy-violation;
+    sid:2026005; rev:1;
+    metadata:severity medium;
+)
+
+# ============================================================
+# 模块 2: C2 通信检测
+# ============================================================
+
+# --- 检测 Cobalt Strike Beacon 通信 ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"MALWARE-CNC Cobalt Strike Beacon HTTP";
+    flow:established,to_server;
+    content:"GET"; http_method;
+    http_uri;
+    pcre:"/\/[a-f0-9]{32}\/[a-f0-9]{4}\/$/i";
+    classtype:trojan-activity;
+    sid:2026010; rev:1;
+    metadata:affected_product Windows, severity critical;
+)
+
+# --- 检测 Metasploit Meterpreter 通信 ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"MALWARE-CNC Metasploit Meterpreter HTTP";
+    flow:established,to_server;
+    content:"GET"; http_method;
+    content:"/random_bin.bin"; http_uri;
+    classtype:trojan-activity;
+    sid:2026011; rev:1;
+    metadata:affected_product Windows, severity critical;
+)
+
+# --- 检测 Sliver C2 通信 ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"MALWARE-CNC Sliver C2 HTTP";
+    flow:established,to_server;
+    content:"GET"; http_method;
+    http_uri;
+    pcre:"/\/[a-f0-9]{16}\/en-us\/[a-f0-9]{16}\.css/i";
+    classtype:trojan-activity;
+    sid:2026012; rev:1;
+    metadata:severity critical;
+)
+
+# --- 检测 DNS 隧道（C2 over DNS） ---
+alert dns $HOME_NET any -> any 53 (
+    msg:"MALWARE-CNC DNS tunneling suspected";
+    dns_query;
+    content:"."; depth:1;
+    pcre:"/^[a-z0-9]{30,}\./i";
+    classtype:trojan-activity;
+    sid:2026013; rev:1;
+    metadata:severity high;
+)
+
+# --- 检测异常长 HTTP 请求（数据外泄） ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"POLICY-Suspicious large HTTP POST (data exfil)";
+    flow:established,to_server;
+    content:"POST"; http_method;
+    content:"Content-Length: "; http_header;
+    pcre:"/Content-Length:\s*(?:[5-9]\d{5,}|\d{7,})/i";
+    classtype:policy-violation;
+    sid:2026014; rev:1;
+    metadata:severity medium;
+)
+
+# ============================================================
+# 模块 3: 横向移动检测
+# ============================================================
+
+# --- 检测 SMB 远程执行（PsExec 等） ---
+alert smb $HOME_NET any -> $HOME_NET any (
+    msg:"POLICY-SMB remote service creation (PsExec)";
+    flow:established;
+    content:"PSEXESVC"; nocase;
+    classtype:policy-violation;
+    sid:2026020; rev:1;
+    metadata:severity high;
+)
+
+# --- 检测 WinRM 远程执行 ---
+alert http $HOME_NET any -> $HOME_NET 5985 (
+    msg:"POLICY-WinRM remote management";
+    flow:established,to_server;
+    content:"POST"; http_method;
+    content:"/wsman"; http_uri;
+    classtype:policy-violation;
+    sid:2026021; rev:1;
+    metadata:severity medium;
+)
+
+# --- 检测 RDP 暴力破解 ---
+alert tcp $EXTERNAL_NET any -> $HOME_NET 3389 (
+    msg:"SERVER-OTHER RDP brute force attempt";
+    flags:S,12;
+    threshold:type threshold, track by_src, count 10, seconds 60;
+    classtype:attempted-admin;
+    sid:2026022; rev:1;
+    metadata:severity high;
+)
+
+# --- 检测 WMI 远程执行 ---
+alert tcp $HOME_NET any -> $HOME_NET 135 (
+    msg:"POLICY-WMI DCOM connection (remote exec)";
+    flow:established;
+    content:"|05 00 0B|"; depth:3;
+    classtype:policy-violation;
+    sid:2026023; rev:1;
+    metadata:severity medium;
+)
+
+# --- 检测 SSH 连接到内网服务器 ---
+alert tcp $HOME_NET any -> $HOME_NET 22 (
+    msg:"POLICY-SSH connection to internal server";
+    flow:established;
+    content:"SSH-"; depth:4;
+    classtype:policy-violation;
+    sid:2026024; rev:1;
+    metadata:severity low;
+)
+
+# ============================================================
+# 模块 4: 恶意软件通信
+# ============================================================
+
+# --- 检测加密货币挖矿协议（Stratum） ---
+alert tcp $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"MALWARE-CNC Cryptocurrency mining (Stratum protocol)";
+    flow:established;
+    content:"mining.subscribe"; nocase;
+    classtype:coin-mining;
+    sid:2026030; rev:1;
+    metadata:severity high;
+)
+
+# --- 检测 Tor 出口节点通信 ---
+alert tls $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"POLICY-Tor network TLS connection";
+    flow:established;
+    tls.cert_subject;
+    content:"CN=www."; nocase;
+    pcre:"/CN=www\.[a-z0-9]{10,20}\.(com|net|org)/i";
+    classtype:policy-violation;
+    sid:2026031; rev:1;
+    metadata:severity medium;
+)
+
+# --- 检测异常 DNS 查询（DGA 域名） ---
+alert dns $HOME_NET any -> any 53 (
+    msg:"MALWARE-CNC DGA domain query suspected";
+    dns_query;
+    pcre:"/^[a-z]{15,30}\.(com|net|org|info|biz|xyz)$/i";
+    classtype:trojan-activity;
+    sid:2026032; rev:1;
+    metadata:severity medium;
+)
+
+# --- 检测 Base64 编码的 HTTP 请求 ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"MALWARE-CNC Base64 encoded HTTP request";
+    flow:established,to_server;
+    http.uri;
+    pcre:"/[A-Za-z0-9+\/]{50,}={0,2}/";
+    classtype:trojan-activity;
+    sid:2026033; rev:1;
+    metadata:severity medium;
+)
+
+# ============================================================
+# 模块 5: 扫描探测检测
+# ============================================================
+
+# --- 端口扫描检测（SYN 扫描） ---
+alert tcp $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"SCAN-SYN Port scan detected";
+    flags:S,12;
+    threshold:type threshold, track by_src, count 20, seconds 10;
+    classtype:attempted-recon;
+    sid:2026040; rev:1;
+    metadata:severity high;
+)
+
+# --- Nmap 服务版本探测 ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"SCAN-Nmap service version probe";
+    flow:established,to_client;
+    content:"Nmap"; nocase; http_header;
+    content:"Server:"; nocase; http_header;
+    classtype:attempted-recon;
+    sid:2026041; rev:1;
+    metadata:severity medium;
+)
+
+# --- SQLMap User-Agent ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"SCAN-SQLMap User-Agent detected";
+    flow:established,to_server;
+    content:"sqlmap"; nocase; http_user_agent;
+    classtype:web-application-attack;
+    sid:2026042; rev:1;
+    metadata:severity high;
+)
+
+# --- Nikto 扫描器检测 ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"SCAN-Nikto web scanner detected";
+    flow:established,to_server;
+    content:"Nikto"; nocase; http_user_agent;
+    classtype:web-application-attack;
+    sid:2026043; rev:1;
+    metadata:severity medium;
+)
+
+# --- 目录遍历扫描（常见路径） ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"WEB-ATTACK Directory traversal scan";
+    flow:established,to_server;
+    content:"GET"; http_method;
+    http.uri;
+    pcre:"/\/(admin|wp-admin|phpmyadmin|manager|console|debug|\.env|\.git)/i";
+    classtype:web-application-attack;
+    sid:2026044; rev:1;
+    metadata:severity medium;
+)
+
+# ============================================================
+# 模块 6: 数据外泄检测
+# ============================================================
+
+# --- 检测信用卡号外泄 ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"POLICY-Credit card number exfiltration";
+    flow:established,to_server;
+    content:"POST"; http_method;
+    http_client_body;
+    pcre:"/\b(?:4[0-9]{12}(?:[0-9]{3})?|5[1-5][0-9]{14}|3[47][0-9]{13})\b/";
+    classtype:policy-violation;
+    sid:2026050; rev:1;
+    metadata:severity critical;
+)
+
+# --- 检测 SSN 外泄 ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"POLICY-SSN exfiltration";
+    flow:established,to_server;
+    content:"POST"; http_method;
+    http_client_body;
+    pcre:"/\b\d{3}-\d{2}-\d{4}\b/";
+    classtype:policy-violation;
+    sid:2026051; rev:1;
+    metadata:severity critical;
+)
+
+# --- 检测密码外泄（明文 HTTP POST） ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"POLICY-Plaintext password exfiltration";
+    flow:established,to_server;
+    content:"POST"; http_method;
+    content:"password"; nocase; http_client_body;
+    classtype:policy-violation;
+    sid:2026052; rev:1;
+    metadata:severity high;
+)
+
+# --- 检测 DNS 外泄（通过 TXT 记录） ---
+alert dns $HOME_NET any -> any 53 (
+    msg:"POLICY-DNS TXT record data exfiltration";
+    dns_query;
+    content:"."; depth:1;
+    pcre:"/^[a-z0-9+\/]{50,}={0,2}\./i";
+    classtype:policy-violation;
+    sid:2026053; rev:1;
+    metadata:severity high;
+)
+
+# ============================================================
+# 模块 7: Web 攻击检测
+# ============================================================
+
+# --- SQL 注入检测 ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"WEB-ATTACK SQL Injection attempt";
+    flow:established,to_server;
+    content:"GET"; http_method;
+    http.uri;
+    pcre:"/(\%27|')(\s)*(union|select|insert|update|delete|drop|or|and)(\s)/i";
+    classtype:web-application-attack;
+    sid:2026060; rev:1;
+    metadata:severity high;
+)
+
+# --- XSS 检测 ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"WEB-ATTACK XSS attempt";
+    flow:established,to_server;
+    http.uri;
+    pcre:"/(\%3C|<)(\s)*(script|img|svg|iframe|body|on[a-z]+)(\s)/i";
+    classtype:web-application-attack;
+    sid:2026061; rev:1;
+    metadata:severity high;
+)
+
+# --- 命令注入检测 ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"WEB-ATTACK Command injection attempt";
+    flow:established,to_server;
+    http.uri;
+    pcre:"/(\;|\||\`|&&|\$\()\s*(cat|ls|dir|whoami|id|uname|wget|curl|ping|nslookup)/i";
+    classtype:web-application-attack;
+    sid:2026062; rev:1;
+    metadata:severity critical;
+)
+
+# --- SSRF 检测 ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"WEB-ATTACK SSRF attempt (internal IP)";
+    flow:established,to_server;
+    http.uri;
+    pcre:"/(127\.0\.0\.1|0\.0\.0\.0|169\.254\.169\.254|10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+)/i";
+    classtype:web-application-attack;
+    sid:2026063; rev:1;
+    metadata:severity high;
+)
+
+# --- 文件上传检测（Webshell） ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"WEB-ATTACK Webshell upload attempt";
+    flow:established,to_server;
+    content:"POST"; http_method;
+    content:"multipart/form-data"; http_header;
+    file_data;
+    content:"<?php"; nocase;
+    classtype:web-application-attack;
+    sid:2026064; rev:1;
+    metadata:severity critical;
+)
+
+# --- 路径遍历检测 ---
+alert http $EXTERNAL_NET any -> $HOME_NET any (
+    msg:"WEB-ATTACK Path traversal attempt";
+    flow:established,to_server;
+    http.uri;
+    content:"../"; nocase;
+    content:"../"; nocase; distance:1;
+    classtype:web-application-attack;
+    sid:2026065; rev:1;
+    metadata:severity high;
+)
+
+# ============================================================
+# 模块 8: 恶意邮件附件检测
+# ============================================================
+
+# --- 检测可执行附件（.exe/.bat/.cmd/.ps1） ---
+alert smtp any any -> $HOME_NET any (
+    msg:"MALWARE-CNC Suspicious email attachment (executable)";
+    flow:established;
+    content:".exe"; nocase;
+    classtype:trojan-activity;
+    sid:2026070; rev:1;
+    metadata:affected_product Windows, severity high;
+)
+
+# --- 检测 Office 宏文档附件 ---
+alert smtp any any -> $HOME_NET any (
+    msg:"MALWARE-CNC Office macro document attachment";
+    flow:established;
+    content:".docm"; nocase;
+    classtype:trojan-activity;
+    sid:2026071; rev:1;
+    metadata:affected_product Windows, severity medium;
+)
+
+# ============================================================
+# 模块 9: 恶意软件特征检测
+# ============================================================
+
+# --- 检测 Mimikatz 网络特征 ---
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"MALWARE-CNC Mimikatz network activity";
+    flow:established,to_server;
+    content:"mimikatz"; nocase; http_client_body;
+    classtype:credential-theft;
+    sid:2026080; rev:1;
+    metadata:affected_product Windows, severity critical;
+)
+
+# --- 检测 BloodHound 采集器通信 ---
+alert ldap $HOME_NET any -> $HOME_NET 389 (
+    msg:"MALWARE-CNC BloodHound LDAP enumeration";
+    flow:established;
+    content:"(&(objectCategory=person)(objectClass=user))"; nocase;
+    classtype:credential-theft;
+    sid:2026081; rev:1;
+    metadata:severity high;
+)
+
+# --- 检测 Rubeus Kerberos 攻击 ---
+alert tcp $HOME_NET any -> $HOME_NET 88 (
+    msg:"MALWARE-CNC Rubeus Kerberos attack (AS-REP Roasting)";
+    flow:established;
+    content:"|6E 82|"; depth:2;  # AS-REP tag
+    classtype:credential-theft;
+    sid:2026082; rev:1;
+    metadata:affected_product Windows, severity high;
+)
+
+# ============================================================
+# 模块 10: 异常流量检测
+# ============================================================
+
+# --- 检测异常大流量（数据外泄） ---
+alert ip $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"POLICY-Large outbound data transfer";
+    ip_proto:6;  # TCP
+    dsize:>1460;
+    threshold:type limit, track by_src, count 100, seconds 60;
+    classtype:policy-violation;
+    sid:2026090; rev:1;
+    metadata:severity medium;
+)
+
+# --- 检测非工作时间的异常连接 ---
+alert tcp $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"POLICY-Out-of-hours network activity";
+    flow:established;
+    time:0200-0600;
+    threshold:type limit, track by_src, count 50, seconds 300;
+    classtype:policy-violation;
+    sid:2026091; rev:1;
+    metadata:severity low;
+)
+
+# --- 检测 ICMP 隧道 ---
+alert icmp $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"MALWARE-CNC ICMP tunnel suspected";
+    itype:8;
+    dsize:>100;
+    classtype:trojan-activity;
+    sid:2026092; rev:1;
+    metadata:severity medium;
+)
+
+# ============================================================
+# SID 分配规则
+# ============================================================
+# 2026000 - 2026099: 模块 1-10（本文件）
+# 2026100 - 2026199: 预留扩展
+# 2026200 - 2026299: 自定义规则

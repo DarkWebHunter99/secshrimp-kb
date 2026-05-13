@@ -1,0 +1,611 @@
+# Purpose: Sigma 检测规则 — MITRE T1070 Indicator Removal on Host（主机痕迹清除）
+# Auth: 仅限授权使用 — 仅用于自有/授权网络的 SIEM 部署
+# Dependencies: Sigma 2.0+, Winlogbeat/Elastic Agent 日志收集
+# Coverage:
+#   T1070.001 (Clear Windows Event Logs)
+#   T1070.002 (Clear Linux/Mac System Logs)
+#   T1070.003 (Clear Command History)
+#   T1070.004 (File Deletion)
+#   T1070.005 (Network Share Connection Removal)
+#   T1070.006 (Timestomp)
+#   T1070.007 (Clear Network Connection History)
+# Rule IDs: f6a7b8c9-1070-xxx-xxx
+# Reference: https://attack.mitre.org/techniques/T1070/
+
+title: Indicator Removal on Host - T1070 Detection Suite
+id: f6a7b8c9-1070-000-000
+status: experimental
+author: CodeShrimp
+date: 2026/05/11
+description: |
+  检测攻击者在主机上清除痕迹的各种技术。
+  T1070 覆盖 7 个子技术，是攻击链中防御规避阶段的核心。
+  攻击者在完成目标后清除日志、文件、连接记录等以逃避检测。
+
+---
+
+# ============================================================
+# T1070.001 — Clear Windows Event Logs
+# ============================================================
+
+title: Windows Event Log Cleared via wevtutil
+id: f6a7b8c9-1070-001-001
+status: experimental
+description: 检测 wevtutil 命令清除 Windows 事件日志
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.001
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: '\wevtutil.exe'
+  action_clear:
+    CommandLine|contains:
+      - 'clear-log'
+      - 'cl '
+      - 'clean-log'
+  suspicious_log:
+    CommandLine|contains:
+      - 'Security'
+      - 'System'
+      - 'Application'
+      - 'PowerShell'
+      - 'Microsoft-Windows-Sysmon'
+      - 'Microsoft-Windows-Windows Defender'
+      - 'Microsoft-Windows-TaskScheduler'
+      - 'Setup'
+  wildcard_clear:
+    CommandLine|contains:
+      - ' *'
+      - ' /q:'
+  condition: selection and (action_clear or suspicious_log or wildcard_clear)
+falsepositives:
+  - IT 管理员定期清理日志（应有变更工单记录）
+  - 日志轮转脚本
+level: high
+
+---
+
+title: Windows Event Log Cleared via PowerShell
+id: f6a7b8c9-1070-001-002
+status: experimental
+description: 检测 PowerShell Clear-EventLog / Remove-EventLog 命令
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.001
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  cmd_clear:
+    CommandLine|contains:
+      - 'Clear-EventLog'
+      - 'Remove-EventLog'
+      - 'ClearLog'
+  cmd_specific_log:
+    CommandLine|contains:
+      - 'Security'
+      - 'System'
+      - 'Application'
+      - 'PowerShell'
+      - 'Operational'
+  selection_wmic:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains|all:
+      - 'wmic'
+      - 'LogFile'
+      - 'ClearEventLog'
+  condition: (selection and cmd_clear and cmd_specific_log) or selection_wmic
+falsepositives:
+  - 管理脚本清理旧日志
+level: high
+
+---
+
+title: Windows Event Log Cleared via .NET API
+id: f6a7b8c9-1070-001-003
+status: experimental
+description: 检测通过 .NET EventLog.WriteEntry 或直接 API 调用清除事件日志
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.001
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_script:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+  dotnet_clear:
+    CommandLine|contains:
+      - 'EventLog.Clear'
+      - 'EventLog.Delete'
+      - 'Diagnostics.Eventing.Reader.EventLogSession'
+      - 'Clear-EventLog'
+      - 'System.Diagnostics.Eventing.Reader'
+  selection_rundll:
+    Image|endswith: '\rundll32.exe'
+  condition: (selection_script and dotnet_clear) or selection_rundll
+falsepositives:
+  - 合法的事件日志管理工具
+level: high
+
+---
+
+# ============================================================
+# T1070.003 — Clear Command History
+# ============================================================
+
+title: Command History Cleared on Windows
+id: f6a7b8c9-1070-003-001
+status: experimental
+description: 检测清除 Windows 命令行历史记录
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.003
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_doskey:
+    Image|endswith: '\cmd.exe'
+    CommandLine|contains: 'doskey /reinstall'
+  selection_ps_history:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Remove-Item (Get-PSReadLineOption).HistorySavePath'
+      - 'Clear-History'
+      - 'Set-PSReadlineOption -HistorySaveStyle'
+  selection_history_file:
+    Image|endswith: '\cmd.exe'
+    CommandLine|contains|all:
+      - 'del'
+      - 'ConsoleHost_history.txt'
+  condition: selection_doskey or selection_ps_history or selection_history_file
+falsepositives:
+  - 用户清理个人命令历史
+level: medium
+
+---
+
+title: PowerShell Transcript and Script Block Logging Disabled
+id: f6a7b8c9-1070-003-002
+status: experimental
+description: 检测禁用 PowerShell 日志记录（Transcript 和 ScriptBlock Logging）
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.003
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_transcript:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains|all:
+      - 'Set-ItemProperty'
+      - 'EnableTranscripting'
+      - '0'
+  selection_scriptblock:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains|all:
+      - 'Set-ItemProperty'
+      - 'ScriptBlockLogging'
+      - '0'
+  selection_reg_direct:
+    Image|endswith: '\reg.exe'
+    CommandLine|contains|all:
+      - 'add'
+      - 'Microsoft\Windows\PowerShell'
+  condition: selection_transcript or selection_scriptblock or selection_reg_direct
+falsepositives:
+  - 合法的 PowerShell 日志策略管理
+level: high
+
+---
+
+# ============================================================
+# T1070.004 — File Deletion
+# ============================================================
+
+title: Suspicious File Deletion After Compromise
+id: f6a7b8c9-1070-004-001
+status: experimental
+description: 检测删除可疑文件（工具、payload、日志文件）
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.004
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_del:
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  del_tools:
+    CommandLine|contains:
+      - 'del '
+      - 'Remove-Item'
+      - 'rm '
+      - 'rmdir '
+  suspicious_files:
+    CommandLine|contains:
+      - '.exe'
+      - '.dll'
+      - '.ps1'
+      - '.bat'
+      - '.vbs'
+      - '.hta'
+      - '.sct'
+  temp_paths:
+    CommandLine|contains:
+      - '\AppData\Local\Temp\'
+      - '\Windows\Temp\'
+      - '\Users\Public\'
+      - '\ProgramData\'
+  condition: selection_del and del_tools and suspicious_files and temp_paths
+falsepositives:
+  - 清理临时文件
+  - 软件安装后清理
+level: high
+
+---
+
+title: Log File Deletion via Del Command
+id: f6a7b8c9-1070-004-002
+status: experimental
+description: 检测通过 del 命令删除日志文件
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.004
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: '\cmd.exe'
+    CommandLine|contains: 'del '
+  log_files:
+    CommandLine|contains:
+      - '*.log'
+      - '*.evtx'
+      - 'winevt'
+      - 'Sysmon'
+      - 'audit'
+  quiet_flag:
+    CommandLine|contains:
+      - '/q'
+      - '/f'
+      - '/s'
+  condition: selection and log_files and quiet_flag
+falsepositives:
+  - 日志轮转脚本
+  - IT 管理操作
+level: high
+
+---
+
+# ============================================================
+# T1070.006 — Timestomp
+# ============================================================
+
+title: Timestomping via PowerShell
+id: f6a7b8c9-1070-006-001
+status: experimental
+description: 检测通过 PowerShell 修改文件时间戳
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.006
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  timestomp_cmd:
+    CommandLine|contains:
+      - 'Set-ItemProperty'
+      - 'CreationTime'
+      - 'LastWriteTime'
+      - 'LastAccessTime'
+  suspicious_targets:
+    CommandLine|contains:
+      - '.exe'
+      - '.dll'
+      - '.ps1'
+      - '.bat'
+  condition: selection and timestomp_cmd and suspicious_targets
+falsepositives:
+  - 合法的文件时间戳管理脚本
+level: medium
+
+---
+
+title: Timestomping via touch Command
+id: f6a7b8c9-1070-006-002
+status: experimental
+description: 检测 touch 命令修改文件时间戳（Linux/WSL 环境）
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.006
+logsource:
+  product: linux
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: '/touch'
+  suspicious_args:
+    CommandLine|contains:
+      - '-r'
+      - '-t'
+      - '-d'
+      - '-c'
+  suspicious_files:
+    CommandLine|contains:
+      - '/etc/passwd'
+      - '/etc/shadow'
+      - '/var/log'
+      - '.bash_history'
+      - '/tmp/'
+  condition: selection and suspicious_args and suspicious_files
+falsepositives:
+  - 合法的文件时间戳管理
+level: medium
+
+---
+
+# ============================================================
+# T1070.007 — Clear Network Connection History
+# ============================================================
+
+title: Network Connection History Cleared
+id: f6a7b8c9-1070-007-001
+status: experimental
+description: 检测清除网络连接历史记录（ARP 缓存、路由表、DNS 缓存）
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.007
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_arp:
+    Image|endswith: '\cmd.exe'
+    CommandLine|contains: 'arp -d *'
+  selection_route:
+    Image|endswith: '\cmd.exe'
+    CommandLine|contains: 'route /f'
+  selection_dns:
+    Image|endswith: '\cmd.exe'
+    CommandLine|contains: 'ipconfig /flushdns'
+  selection_netsh:
+    Image|endswith: '\netsh.exe'
+    CommandLine|contains:
+      - 'firewall reset'
+      - 'reset all'
+  selection_powershell_net:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Clear-DnsClientCache'
+      - 'Reset-NetIPConfiguration'
+      - 'Remove-NetRoute'
+  condition: selection_arp or selection_route or selection_dns or selection_netsh or selection_powershell_net
+falsepositives:
+  - 网络配置重置脚本
+  - IT 管理操作
+level: medium
+
+---
+
+# ============================================================
+# T1070.005 — Network Share Connection Removal
+# ============================================================
+
+title: Network Share Connection Removed
+id: f6a7b8c9-1070-005-001
+status: experimental
+description: 检测删除网络共享连接（net use /delete）
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.005
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection:
+    Image|endswith: '\cmd.exe'
+    CommandLine|contains|all:
+      - 'net'
+      - 'use'
+      - '/delete'
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Remove-SmbMapping'
+      - 'net use * /delete'
+  condition: selection or selection_powershell
+falsepositives:
+  - 正常的网络共享断开操作
+level: low
+
+---
+
+# ============================================================
+# T1070.002 — Clear Linux/Mac System Logs
+# ============================================================
+
+title: Linux System Log Cleared
+id: f6a7b8c9-1070-002-001
+status: experimental
+description: 检测清除 Linux 系统日志文件
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.002
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection_truncate:
+    Image|endswith:
+      - '/truncate'
+      - '/sh'
+      - '/bash'
+    CommandLine|contains:
+      - '/var/log/'
+      - 'syslog'
+      - 'auth.log'
+      - 'kern.log'
+      - 'messages'
+      - 'secure'
+  selection_rm_log:
+    Image|endswith:
+      - '/rm'
+      - '/sh'
+      - '/bash'
+    CommandLine|contains:
+      - '/var/log/'
+      - 'wtmp'
+      - 'btmp'
+      - 'lastlog'
+  selection_journalctl:
+    Image|endswith: '/journalctl'
+    CommandLine|contains:
+      - '--vacuum-time'
+      - '--vacuum-size'
+  selection_shred:
+    Image|endswith: '/shred'
+    CommandLine|contains:
+      - '/var/log/'
+      - 'wtmp'
+      - 'btmp'
+  condition: selection_truncate or selection_rm_log or selection_journalctl or selection_shred
+falsepositives:
+  - 合法的日志管理操作
+  - logrotate 执行
+level: high
+
+---
+
+title: Audit Log Cleared on Linux
+id: f6a7b8c9-1070-002-002
+status: experimental
+description: 检测清除 Linux 审计日志（auditd / journalctl）
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070.002
+logsource:
+  category: process_creation
+  product: linux
+detection:
+  selection_auditctl:
+    Image|endswith: '/auditctl'
+    CommandLine|contains: '-e 0'
+  selection_audit_log:
+    Image|endswith:
+      - '/sh'
+      - '/bash'
+    CommandLine|contains:
+      - '/var/log/audit/'
+      - 'audit.log'
+  condition: selection_auditctl or selection_audit_log
+falsepositives:
+  - 审计策略管理
+  - 安全配置变更
+level: high
+
+---
+
+# ============================================================
+# 综合场景 — 多种痕迹清除行为检测
+# ============================================================
+
+title: Multiple Indicator Removal Techniques in Short Timeframe
+id: f6a7b8c9-1070-999-001
+status: experimental
+description: |
+  检测短时间内使用多种痕迹清除技术，可能为攻击链清理阶段。
+  攻击者通常在完成目标后依次清除日志、删除工具、清除连接记录。
+author: CodeShrimp
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1070
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_indicator_removal:
+    Image|endswith:
+      - '\wevtutil.exe'
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  removal_commands:
+    CommandLine|contains:
+      - 'clear-log'
+      - 'Clear-EventLog'
+      - 'del '
+      - 'Remove-Item'
+      - 'doskey /reinstall'
+      - 'arp -d *'
+      - 'route /f'
+      - 'ipconfig /flushdns'
+      - 'Clear-History'
+      - 'Set-ItemProperty'
+  condition: selection_indicator_removal and removal_commands
+  timeframe: 10m
+  condition2: count(Image) by Hostname > 3
+falsepositives:
+  - IT 运维批量操作
+  - 系统维护脚本
+level: high

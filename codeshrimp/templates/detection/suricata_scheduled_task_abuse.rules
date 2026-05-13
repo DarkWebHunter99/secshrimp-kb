@@ -1,0 +1,225 @@
+# Purpose: Suricata IDS 规则 — T1053.005 Scheduled Task 网络检测
+# Auth: 仅限授权使用
+# Coverage: T1053.005 (Scheduled Task) remote abuse, lateral movement
+# SID Range: 2026300-2026399
+# Reference: https://attack.mitre.org/techniques/T1053/005/
+# Created: 2026-05-12
+
+# ============================================================
+# 1. 远程计划任务创建 — SMB/RPC
+# ============================================================
+# 攻击者通过 SMB 远程创建计划任务（schtasks /s <host> /create）
+# 使用 TCPIP 字符串传输任务定义
+
+# 远程计划任务创建 — 通过 SMB 管道
+alert tcp any any -> any 445 (
+    msg:"ET T1053.005 Scheduled Task Remote Creation via SMB";
+    flow:established,to_server;
+    content:"|5C|pipe|5C|atsvc"; nocase; sid:2026300; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# 远程计划任务创建 — WinReg 管道
+alert tcp any any -> any 445 (
+    msg:"ET T1053.005 Scheduled Task Remote Creation via WinReg";
+    flow:established,to_server;
+    content:"|5C|pipe|5C|winreg"; nocase; sid:2026301; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# ============================================================
+# 2. 远程计划任务创建 — WMI
+# ============================================================
+# 攻击者通过 WMI 远程创建计划任务
+# WMI 使用 TCP 135 (RPC) 和动态端口
+
+# WMI 远程进程创建 — 关联计划任务
+alert tcp any any -> any 135 (
+    msg:"ET T1053.005 WMI Remote Process Creation - Potential Scheduled Task";
+    flow:established,to_server;
+    content:"|05|"; depth:1;
+    content:"|00 00 00 00|"; distance:4; within:4;
+    content:"|05 00 00 00|"; distance:8; within:8;
+    sid:2026302; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# WMI 事件订阅持久化 — 创建过滤器和消费者
+alert tcp any any -> any 135 (
+    msg:"ET T1053.005 WMI Event Subscription Persistence";
+    flow:established,to_server;
+    content:"__FilterToConsumerBinding"; sid:2026303; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# ============================================================
+# 3. Schtasks 命令行远程执行特征
+# ============================================================
+# schtasks /s <IP> /create 的网络特征
+
+# schtasks 远程创建 — HTTP(S) 通道
+alert http any any -> any any (
+    msg:"ET T1053.005 schtasks.exe Remote Task Creation HTTP";
+    flow:established,to_server;
+    content:"POST"; http.method;
+    content:"schtasks"; http.client_body; nocase; sid:2026304; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# ============================================================
+# 4. 通过网络接收的任务执行命令
+# ============================================================
+# 攻击者通过 HTTP/DNS 接收任务执行指令
+
+# HTTP 响应中嵌入 schtasks 命令
+alert http any any -> any any (
+    msg:"ET T1053.005 schtasks Command in HTTP Response";
+    flow:established,to_client;
+    content:"schtasks"; http.response.body; nocase; sid:2026305; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# DNS 响应中嵌入任务命令（DNS 隧道持久化）
+alert dns any any -> any any (
+    msg:"ET T1053.005 DNS Tunnel Task Command";
+    flow:established,to_client;
+    dns.query; content:"schtasks"; nocase; sid:2026306; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# ============================================================
+# 5. PsExec 与计划任务组合 — 横向移动
+# ============================================================
+# PsExec 远程执行 + schtasks 创建是常见横向移动模式
+
+# PsExec 服务安装 — PSEXESVC
+alert tcp any any -> any 445 (
+    msg:"ET T1053.005 PsExec Service Install - Potential Lateral Movement";
+    flow:established,to_server;
+    content:"PSEXESVC"; nocase; sid:2026307; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# PsExec 远程执行 schtasks
+alert tcp any any -> any 445 (
+    msg:"ET T1053.005 PsExec Remote schtasks Execution";
+    flow:established,to_server;
+    content:"schtasks"; nocase; offset:100; depth:200;
+    sid:2026308; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# ============================================================
+# 6. WinRM 远程任务创建
+# ============================================================
+# 攻击者通过 WinRM（5985/5986）远程创建计划任务
+
+# WinRM 远程任务创建
+alert http any any -> any 5985 (
+    msg:"ET T1053.005 WinRM Remote Task Creation";
+    flow:established,to_server;
+    content:"POST"; http.method;
+    content:"schtasks"; http.client_body; nocase; sid:2026309; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+alert http any any -> any 5986 (
+    msg:"ET T1053.005 WinRM HTTPS Remote Task Creation";
+    flow:established,to_server;
+    content:"POST"; http.method;
+    content:"schtasks"; http.client_body; nocase; sid:2026310; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# ============================================================
+# 7. DCOM 远程任务创建
+# ============================================================
+# 攻击者利用 DCOM 接口远程创建计划任务
+# IPC$ 通信特征
+
+# DCOM 任务调度器远程调用
+alert tcp any any -> any 445 (
+    msg:"ET T1053.005 DCOM Scheduled Task Remote Call";
+    flow:established,to_server;
+    content:"|05 00 00|"; offset:0; depth:3;
+    content:"|00 00 00 00 00 00 00 00|"; sid:2026311; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# ============================================================
+# 8. 数据外泄 — 通过计划任务触发
+# ============================================================
+# 攻击者创建计划任务后，任务执行外泄脚本
+
+# 任务执行后的数据外泄流量
+alert http any any -> any any (
+    msg:"ET T1053.005 Task-Triggered Data Exfiltration";
+    flow:established,to_server;
+    content:"POST"; http.method;
+    content:"file"; http.client_body; nocase;
+    content:"upload"; http.client_body; nocase; sid:2026312; rev:1;
+    classtype:attempted-data-leak;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# DNS 外泄 — 任务触发的 DNS 查询异常
+alert dns any any -> any any (
+    msg:"ET T1053.005 Task-Triggered DNS Exfiltration";
+    flow:established,to_client;
+    dns.query; pcre:"/^[a-zA-Z0-9]{30,}\./"; sid:2026313; rev:1;
+    classtype:attempted-data-leak;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# ============================================================
+# 9. 阈值检测 — 高频任务创建
+# ============================================================
+# 检测短时间内大量计划任务创建，可能是自动化攻击
+
+# 高频任务创建
+alert tcp any any -> any 445 (
+    msg:"ET T1053.005 High Frequency Scheduled Task Creation";
+    flow:established,to_server;
+    content:"atsvc"; nocase;
+    threshold:type threshold, track by_src, count 10, seconds 60;
+    sid:2026314; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# ============================================================
+# 10. 可疑任务执行流量
+# ============================================================
+# 计划任务执行后产生的异常网络流量
+
+# 任务触发的反弹 Shell
+alert tcp any any -> any any (
+    msg:"ET T1053.005 Task-Triggered Reverse Shell";
+    flow:established,from_server;
+    content:"|00|"; depth:1;
+    content:"cmd.exe"; sid:2026315; rev:1;
+    classtype:attempted-admin;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)
+
+# 任务触发的 C2 通信
+alert http any any -> any any (
+    msg:"ET T1053.005 Task-Triggered C2 Communication";
+    flow:established,to_server;
+    content:"POST"; http.method;
+    content:"X-C2"; http.header; nocase; sid:2026316; rev:1;
+    classtype:command-and-control;
+    reference:url,attack.mitre.org/techniques/T1053/005/;
+)

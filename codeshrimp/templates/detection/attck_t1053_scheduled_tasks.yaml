@@ -1,0 +1,381 @@
+# Purpose: Sigma 检测规则 — T1053.005 Scheduled Task 滥用
+# Auth: 仅限授权使用 — 仅用于自有/授权网络的 SIEM 部署
+# Dependencies: Sigma 2.0+, Winlogbeat/Elastic Agent 日志收集
+# Coverage: T1053.005 (Scheduled Task), T1053.003 (Cron), T1053.006 (Systemd Timers)
+# Rule IDs: a1b2c3d4-t1053-xxx
+# Reference: https://attack.mitre.org/techniques/T1053/005/
+# Created: 2026-05-12
+
+title: Scheduled Task Abuse Detection Suite
+id: a1b2c3d4-t1053-000-000
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 Windows 计划任务的滥用行为，包括持久化、提权和横向移动。
+  覆盖任务创建、修改、删除、执行和远程操作全生命周期。
+
+---
+
+# ============================================================
+# 1. 任务创建/修改 — 可疑 Action 配置
+# ============================================================
+# Event ID 4698: 安全日志 — 已创建计划任务
+# Event ID 200: 任务调度器操作日志 — 任务已创建
+
+title: Suspicious Scheduled Task Created via Command Line
+id: a1b2c3d4-t1053-001-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测通过命令行（schtasks.exe 或 PowerShell）创建的计划任务。
+  合法任务通常通过 GUI 或组策略创建，命令行创建多见于攻击场景。
+  MITRE: T1053.005 - Scheduled Task
+tags:
+  - attack.execution
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_event:
+    EventID: 4698
+  selection_cmdline:
+    TaskContent|contains:
+      - 'schtasks'
+      - 'Register-ScheduledTask'
+      - 'New-ScheduledTask'
+      - 'schtasks.exe'
+  condition: selection_event and selection_cmdline
+falsepositives:
+  - 系统管理员使用命令行批量部署任务
+  - SCCM/Intune 部署的合规任务
+level: medium
+---
+
+title: Scheduled Task Created with Suspicious Action
+id: a1b2c3d4-t1053-001-002
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测计划任务的 Action 包含可疑命令（编码 PowerShell、下载执行、
+  危险路径等）。这是检测持久化和初始执行的关键规则。
+tags:
+  - attack.execution
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_event:
+    EventID: 4698
+  selection_suspicious:
+    TaskContent|contains:
+      # 编码命令
+      - '-enc'
+      - '-EncodedCommand'
+      - '-e '
+      - 'FromBase64String'
+      # 下载执行
+      - 'Invoke-WebRequest'
+      - 'Invoke-Expression'
+      - 'IEX'
+      - 'Net.WebClient'
+      - 'DownloadString'
+      - 'DownloadFile'
+      - 'certutil'
+      - 'bitsadmin'
+      # 危险路径
+      - '\\AppData\\Local\\Temp\\'
+      - '\\ProgramData\\'
+      - '\\Users\\Public\\'
+      - '\\Windows\\Temp\\'
+      # 可疑命令
+      - 'cmd.exe /c'
+      - 'cmd.exe /k'
+      - 'powershell -w hidden'
+      - 'powershell -nop'
+      - 'powershell -ep bypass'
+      - 'wscript'
+      - 'cscript'
+      - 'mshta'
+      - 'regsvr32'
+      - 'rundll32'
+  condition: selection_event and selection_suspicious
+falsepositives:
+  - 安全工具的定时扫描任务
+level: high
+---
+
+# ============================================================
+# 2. 任务创建 — 高权限/特权操作
+# ============================================================
+
+title: Scheduled Task Created with Highest Privilege
+id: a1b2c3d4-t1053-001-003
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测以最高权限（SYSTEM）运行的计划任务。攻击者创建 SYSTEM 级任务
+  实现持久化和提权。TaskContent 中 RunLevel=Highest 表示以最高权限运行。
+tags:
+  - attack.execution
+  - attack privilege_escalation
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_event:
+    EventID: 4698
+  selection_highest:
+    TaskContent|contains:
+      - 'RunLevel>Highest'
+      - 'RunLevel: Highest'
+      - 'HighestAvailable'
+      - '<RunLevel>Highest</RunLevel>'
+  condition: selection_event and selection_highest
+falsepositives:
+  - Windows Update 计划任务
+  - 系统维护任务（如磁盘清理）
+level: medium
+---
+
+title: Scheduled Task Created Running as SYSTEM Account
+id: a1b2c3d4-t1053-001-004
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测以 SYSTEM 账户身份运行的计划任务。SYSTEM 任务拥有最高权限，
+  常用于后门持久化。
+tags:
+  - attack.execution
+  - attack privilege_escalation
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_event:
+    EventID: 4698
+  selection_system:
+    TaskContent|contains:
+      - 'NT AUTHORITY\\SYSTEM'
+      - 'S-1-5-18'
+      - 'AuthoringType>SYSTEM'
+  condition: selection_event and selection_system
+falsepositives:
+  - Windows 内置系统任务
+level: medium
+---
+
+# ============================================================
+# 3. 任务触发器 — 异常触发条件
+# ============================================================
+
+title: Scheduled Task with Unusual Trigger Condition
+id: a1b2c3d4-t1053-001-005
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测使用异常触发器的计划任务：登录触发、事件触发、用户空闲触发。
+  攻击者常用登录触发实现用户级持久化，事件触发实现条件执行。
+tags:
+  - attack.execution
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_event:
+    EventID: 4698
+  selection_trigger:
+    TaskContent|contains:
+      # 登录触发
+      - 'LogonTrigger'
+      - 'TRIGGER LOGON'
+      # 事件触发
+      - 'EventTrigger'
+      - 'EventID>'
+      # 用户空闲触发
+      - 'IdleTrigger'
+      # 系统启动触发（非标准场景）
+      - 'BootTrigger'
+  condition: selection_event and selection_trigger
+falsepositives:
+  - 合法的用户登录脚本
+  - 系统启动维护任务
+level: low
+---
+
+# ============================================================
+# 4. 任务远程操作 — 横向移动
+# ============================================================
+
+title: Scheduled Task Created on Remote System
+id: a1b2c3d4-t1053-001-006
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测在远程系统上创建计划任务。攻击者使用 schtasks /create /s <host>
+  或 PowerShell 的 New-ScheduledTask -ComputerName 在远程主机部署任务，
+  实现横向移动和持久化。
+tags:
+  - attack.lateral_movement
+  - attack.execution
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_event:
+    EventID: 4698
+  selection_remote:
+    TaskContent|contains:
+      - '/s '
+      - '-ComputerName'
+      - '-Computer '
+      - '\\\\'
+      - '-S '
+  selection_user:
+    SubjectUserName|contains:
+      - '-'
+  condition: selection_event and selection_remote and not selection_user
+falsepositives:
+  - 域管理员通过 GPO 部署任务
+  - SCCM 远程部署
+level: high
+---
+
+# ============================================================
+# 5. 任务删除 — 日志清除 / 攻击痕迹清理
+# ============================================================
+
+title: Scheduled Task Deleted
+id: a1b2c3d4-t1053-002-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测计划任务被删除。攻击者在完成任务后删除计划任务以清理痕迹。
+  特别关注短时间内创建又删除的任务。
+tags:
+  - attack.defense_evasion
+  - attack.t1070
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4702
+    TaskName|contains:
+      - ''
+  condition: selection
+falsepositives:
+  - 管理员清理过期任务
+level: low
+---
+
+title: Scheduled Task Deleted Shortly After Creation
+id: a1b2c3d4-t1053-002-002
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测短时间内（5分钟内）创建又被删除的计划任务。
+  这是典型的攻击行为：创建任务执行 payload 后立即删除。
+tags:
+  - attack.defense_evasion
+  - attack.execution
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_create:
+    EventID: 4698
+  selection_delete:
+    EventID: 4702
+  condition: selection_create and selection_delete
+falsepositives: []
+level: high
+---
+
+# ============================================================
+# 6. Task Scheduler 操作日志 — 任务执行
+# ============================================================
+
+title: Scheduled Task Executed with Suspicious Binary
+id: a1b2c3d4-t1053-003-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测计划任务执行可疑二进制文件。覆盖 LOLBAS、临时目录、
+  非标准路径等场景。
+tags:
+  - attack.execution
+  - attack.t1053.005
+logsource:
+  product: windows
+  service: 'task-scheduler'
+detection:
+  selection:
+    EventID: 200
+  selection_suspicious:
+    TaskName|contains:
+      - ''
+  selection_path:
+    # 通过关联进程事件检测执行路径
+    Image|contains:
+      - '\\Temp\\'
+      - '\\AppData\\Local\\Temp\\'
+      - '\\ProgramData\\'
+      - '\\Users\\Public\\'
+      - 'mshta.exe'
+      - 'wscript.exe'
+      - 'cscript.exe'
+      - 'regsvr32.exe'
+      - 'rundll32.exe'
+      - 'certutil.exe'
+  condition: selection and selection_path
+falsepositives:
+  - 合法软件的临时安装脚本
+level: medium
+---
+
+# ============================================================
+# 7. 组策略 — 计划任务分发
+# ============================================================
+
+title: Group Policy Scheduled Task Created
+id: a1b2c3d4-t1053-004-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测通过组策略创建的计划任务。虽然组策略分发是合法操作，
+  但攻击者可能通过 GPO 注入恶意计划任务实现域级持久化。
+tags:
+  - attack.persistence
+  - attack.t1484.001
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4698
+    TaskContent|contains:
+      - 'GPO'
+      - 'Group Policy'
+      - 'Microsoft\\Windows\\Group Policy'
+  condition: selection
+falsepositives:
+  - IT 管理员通过 GPO 部署标准任务
+level: info

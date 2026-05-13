@@ -1,0 +1,255 @@
+# ============================================================
+# MITRE ATT&CK T1003.001 — LSASS Memory Dumping Detection
+# ============================================================
+# Technique: T1003.001 - OS Credential Dumping: LSASS Memory
+# Platform: Windows
+# Tactics: Credential Access
+# Covers: Mimikatz, ProcDump, comsvcs.dll, nanodump, PPL bypass
+# ============================================================
+
+title: LSASS Memory Dumping via Direct Access
+id: c3d4e5f6-1003-001-001
+status: stable
+description: |
+  Detects processes accessing LSASS memory directly, which is the primary
+  indicator of credential dumping tools like Mimikatz, ProcDump, nanodump,
+  and other LSASS memory extraction techniques.
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+  - https://www.elastic.co/guide/en/security/current/credential-dumping-lsass.html
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.credential_access
+  - attack.t1003.001
+logsource:
+  category: process_access
+  product: windows
+detection:
+  selection_lsass_access:
+    TargetImage|endswith: '\lsass.exe'
+    GrantedAccess:
+      - '0x1010'   # PROCESS_QUERY_LIMITED_INFORMATION | PROCESS_VM_READ
+      - '0x1410'   # + PROCESS_CREATE_PROCESS
+      - '0x1FFFFF'  # PROCESS_ALL_ACCESS
+      - '0x1438'    # COMMON combinations
+  filter_legitimate:
+    SourceImage|endswith:
+      - '\csrss.exe'
+      - '\wininit.exe'
+      - '\svchost.exe'
+      - '\wmiprvse.exe'
+      - '\MsMpEng.exe'         # Windows Defender
+      - '\MsSense.exe'         # Windows Defender ATP
+      - '\SenseIR.exe'
+      - '\SenseCncProxy.exe'
+      - '\sqlservr.exe'        # SQL Server
+      - '\msiexec.exe'         # MSI installer (temp)
+    GrantedAccess:
+      - '0x1010'
+      - '0x1410'
+  condition: selection_lsass_access and not filter_legitimate
+falsepositives:
+  - Windows Defender and Defender ATP scanning LSASS
+  - SQL Server accessing LSASS
+  - Some legitimate management tools
+level: critical
+
+---
+
+title: LSASS Dumping via ProcDump
+id: c3d4e5f6-1003-001-002
+status: stable
+description: |
+  Detects ProcDump being used to dump LSASS process memory,
+  a common technique for credential extraction.
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.credential_access
+  - attack.t1003.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_procdump_lsass:
+    Image|endswith: '\procdump.exe'
+    CommandLine|contains: 'lsass'
+  selection_procdump_m:
+    Image|endswith: '\procdump.exe'
+    CommandLine|contains|all:
+      - '-ma'
+      - 'lsass'
+  selection_tasklist_dump:
+    Image|endswith: '\tasklist.exe'
+    CommandLine|contains|all:
+      - '/svc'
+      - 'lsass'
+  condition: selection_procdump_lsass or selection_procdump_m or selection_tasklist_dump
+falsepositives:
+  - IT troubleshooting with ProcDump
+  - Legitimate LSASS debugging
+level: high
+
+---
+
+title: LSASS Dumping via comsvcs.dll MiniDump
+id: c3d4e5f6-1003-001-003
+status: stable
+description: |
+  Detects abuse of comsvcs.dll!MiniDump to dump LSASS memory,
+  a fileless credential dumping technique.
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+  - https://www.elastic.co/security-research/persistence-in-a-windows-environment
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.credential_access
+  - attack.t1003.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_rundll32_comsvcs:
+    Image|endswith: '\rundll32.exe'
+    CommandLine|contains|all:
+      - 'comsvcs'
+      - 'MiniDump'
+  selection_rundll32_lsass:
+    Image|endswith: '\rundll32.exe'
+    CommandLine|contains|all:
+      - 'lsass'
+      - 'dump'
+  condition: selection_rundll32_comsvcs or selection_rundll32_lsass
+falsepositives:
+  - Rare legitimate debugging scenarios
+level: high
+
+---
+
+title: Credential Dumping via PowerShell MiniDump
+id: c3d4e5f6-1003-001-004
+status: stable
+description: |
+  Detects PowerShell using MiniDump or Out-Minidump to extract LSASS,
+  a common attack technique in PowerShell-based frameworks.
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.credential_access
+  - attack.t1003.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  selection_minidump:
+    CommandLine|contains:
+      - 'Out-Minidump'
+      - 'MiniDumpWriteDump'
+      - 'Get-Process lsass'
+      - 'Invoke-Mimikatz'
+      - 'DumpCreds'
+      - 'sekurlsa'
+  selection_lsass_access_ps:
+    CommandLine|contains|all:
+      - 'lsass'
+      - 'dump'
+  condition: selection_powershell and (selection_minidump or selection_lsass_access_ps)
+falsepositives:
+  - Security research and testing
+level: critical
+
+---
+
+title: LSASS PPL Bypass Attempt
+id: c3d4e5f6-1003-001-005
+status: stable
+description: |
+  Detects attempts to bypass LSASS Protected Process Light (PPL),
+  which is required for modern credential dumping techniques.
+references:
+  - https://attack.mitre.org/techniques/T1003/001/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.credential_access
+  - attack.t1003.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_ppl_bypass:
+    Image|endswith:
+      - '\mimidrv.sys'
+      - '\mimidrv.exe'
+    CommandLine|contains:
+      - 'mimikatz'
+  selection_dbk_core:
+    CommandLine|contains|all:
+      - 'DriverEntry'
+      - 'PsSetLoadImageNotifyRoutine'
+  selection_katz_driver:
+    Image|endswith:
+      - '\mimidrv.sys'
+  condition: selection_ppl_bypass or selection_dbk_core or selection_katz_driver
+falsepositives:
+  - Security research tools (in lab environments)
+level: critical
+
+---
+
+title: Suspicious Access to SAM/SYSTEM/SECURITY Hives
+id: c3d4e5f6-1003-001-006
+status: stable
+description: |
+  Detects direct access to SAM, SYSTEM, and SECURITY registry hives
+  for offline credential extraction.
+references:
+  - https://attack.mitre.org/techniques/T1003/002/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.credential_access
+  - attack.t1003.002
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_reg_sam:
+    CommandLine|contains|all:
+      - 'reg'
+      - 'save'
+      - 'SAM'
+  selection_reg_system:
+    CommandLine|contains|all:
+      - 'reg'
+      - 'save'
+      - 'SYSTEM'
+  selection_reg_security:
+    CommandLine|contains|all:
+      - 'reg'
+      - 'save'
+      - 'SECURITY'
+  selection_reg_dump_all:
+    CommandLine|contains|all:
+      - 'reg'
+      - 'save'
+      - 'hklm'
+  filter_backup_software:
+    Image|endswith:
+      - '\backup.exe'
+      - '\wbadmin.exe'
+  condition: (selection_reg_sam or selection_reg_system or selection_reg_security or selection_reg_dump_all) and not filter_backup_software
+falsepositives:
+  - Legitimate system backup operations
+  - System administrators creating offline hives
+level: high

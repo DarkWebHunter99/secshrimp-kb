@@ -1,0 +1,449 @@
+# ============================================================
+# MITRE ATT&CK T1059.007 — JavaScript/Scripting 滥用检测
+# ============================================================
+# Technique: T1059.007 - Command and Scripting Interpreter: JavaScript
+# Platform: Windows (wscript/cscript/mshta), Linux (Node.js), Browser
+# Tactics: Execution, Defense Evasion
+# Covers: wscript/cscript 滥用、mshta JS 执行、Node.js 恶意脚本、
+#         浏览器扩展攻击、Prototype Pollution、JS Shell
+# ============================================================
+
+title: JavaScript/Scripting Abuse Detection Suite
+id: e6f7a8b9-1059-007-000
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 JavaScript 脚本解释器的滥用行为。wscript/cscript 是
+  Windows 上最常见的脚本执行入口之一，攻击者常利用它执行
+  恶意 VBScript/JScript，绕过应用白名单。
+
+---
+
+# ============================================================
+# 1. wscript/cscript 可疑执行
+# ============================================================
+
+title: WScript/CScript Execution of Suspicious Script
+id: e6f7a8b9-1059-007-001-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 wscript.exe 或 cscript.exe 执行可疑脚本文件。
+  攻击者使用 .vbs/.js/.wsf 脚本执行恶意操作。
+tags:
+  - attack.execution
+  - attack.t1059.007
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_script_host:
+    Image|endswith:
+      - '\wscript.exe'
+      - '\cscript.exe'
+  selection_suspicious_script:
+    CommandLine|contains:
+      # 可疑脚本路径
+      - '\\Temp\\'
+      - '\\AppData\\Local\\Temp\\'
+      - '\\ProgramData\\'
+      - '\\Users\\Public\\'
+      # 可疑脚本扩展名
+      - '.vbs'
+      - '.js'
+      - '.wsf'
+      - '.jse'
+      # 可疑行为
+      - 'WScript.Shell'
+      - 'Shell.Application'
+      - 'ADODB.Stream'
+      - 'MSXML2.XMLHTTP'
+      - 'WinHttp.WinHttpRequest'
+  condition: selection_script_host and selection_suspicious_script
+falsepositives:
+  - 合法的 VBScript 系统管理脚本
+level: high
+---
+
+title: WScript/CScript Launched by Office Application
+id: e6f7a8b9-1059-007-001-002
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 Office 应用启动 wscript/cscript。
+  这是恶意宏执行的典型模式：Office → wscript → 恶意脚本。
+tags:
+  - attack.execution
+  - attack.t1059.007
+  - attack.t1059.005
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_script_host:
+    Image|endswith:
+      - '\wscript.exe'
+      - '\cscript.exe'
+  selection_office_parent:
+    ParentImage|endswith:
+      - '\winword.exe'
+      - '\excel.exe'
+      - '\powerpnt.exe'
+      - '\msaccess.exe'
+      - '\mspub.exe'
+      - '\visio.exe'
+  condition: selection_script_host and selection_office_parent
+falsepositives:
+  - Office 宏自动化（极少见）
+level: critical
+---
+
+# ============================================================
+# 2. mshta JavaScript 执行
+# ============================================================
+
+title: MSHTA JavaScript Execution
+id: e6f7a8b9-1059-007-001-003
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 mshta.exe 执行 JavaScript/VBScript 代码。
+  mshta 是 LOLBin，常用于绕过应用白名单执行恶意代码。
+tags:
+  - attack.execution
+  - attack.t1218
+  - attack.t1059.007
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_mshta:
+    Image|endswith: '\mshta.exe'
+  selection_javascript:
+    CommandLine|contains:
+      - 'javascript:'
+      - 'vbscript:'
+      - 'Execute('
+      - 'Eval('
+      - 'ActiveXObject'
+      - 'WScript.Shell'
+      - 'Shell.Application'
+      - 'xmlhttp'
+      - 'MSXML2'
+      - 'Adodb.Stream'
+  condition: selection_mshta and selection_javascript
+falsepositives:
+  - 合法的 HTA 应用
+level: critical
+---
+
+# ============================================================
+# 3. Node.js 恶意脚本执行
+# ============================================================
+
+title: Node.js Execution of Suspicious Script
+id: e6f7a8b9-1059-007-002-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 Node.js 执行可疑脚本。攻击者利用 Node.js 执行
+  恶意 JavaScript，常见于 Web 应用攻击和后渗透。
+tags:
+  - attack.execution
+  - attack.t1059.007
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_node:
+    Image|endswith:
+      - '\node.exe'
+      - '\node'
+  selection_suspicious:
+    CommandLine|contains:
+      # 反弹 Shell
+      - 'child_process'
+      - 'require(\'child_process\')'
+      - 'execSync'
+      - 'spawn'
+      # 网络请求
+      - 'http.request'
+      - 'https.request'
+      - 'net.connect'
+      - 'dgram'
+      # 文件操作
+      - 'fs.writeFile'
+      - 'fs.readFileSync'
+      - 'process.env'
+      # 编码执行
+      - 'Buffer.from'
+      - 'eval('
+      - 'Function('
+  condition: selection_node and selection_suspicious
+falsepositives:
+  - 合法的 Node.js 应用
+level: medium
+---
+
+title: Node.js Reverse Shell
+id: e6f7a8b9-1059-007-002-002
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 Node.js 反弹 Shell 特征。
+  Node.js 反弹 Shell 是后渗透中的常见手法。
+tags:
+  - attack.execution
+  - attack.t1059.007
+  - attack.command_and_control
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_node:
+    Image|endswith:
+      - '\node.exe'
+      - '\node'
+  selection_reverse:
+    CommandLine|contains:
+      - 'child_process.exec'
+      - 'child_process.spawn'
+      - 'child_process.fork'
+      - 'net.Socket'
+      - 'process.stdin'
+      - 'process.stdout'
+      - 'process.stderr'
+      - 'pipe('
+      - '5>&1'
+      - '7>&1'
+  condition: selection_node and selection_reverse
+falsepositives:
+  - 合法的远程管理工具
+level: high
+---
+
+# ============================================================
+# 4. 浏览器扩展/Chrome DevTools 攻击
+# ============================================================
+
+title: Chrome DevTools Protocol Abuse
+id: e6f7a8b9-1059-007-003-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 Chrome DevTools Protocol (CDP) 的滥用。
+  攻击者通过 CDP 控制浏览器执行恶意操作。
+tags:
+  - attack.execution
+  - attack.t1059.007
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_chrome:
+    Image|endswith: '\chrome.exe'
+  selection_devtools:
+    CommandLine|contains:
+      - '--remote-debugging-port'
+      - '--remote-debugging-address'
+      - 'devtools'
+  condition: selection_chrome and selection_devtools
+falsepositives:
+  - 合法的 Chrome 开发调试
+level: medium
+---
+
+# ============================================================
+# 5. JScript .NET / .NET 反射调用
+# ============================================================
+
+title: JScript .NET Execution via MSBuild
+id: e6f7a8b9-1059-007-004-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测通过 MSBuild 执行 JScript .NET 代码。
+  攻击者利用 MSBuild 的 Tasks 功能执行任意代码。
+tags:
+  - attack.execution
+  - attack.t1218
+  - attack.t1059.007
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_msbuild:
+    Image|endswith: '\msbuild.exe'
+  selection_inline_task:
+    CommandLine|contains:
+      - '/p:PreBuildEvent'
+      - '/p:PostBuildEvent'
+      - 'UsingTask'
+      - 'CodeTaskFactory'
+  condition: selection_msbuild and selection_inline_task
+falsepositives:
+  - 合法的 .NET 构建过程
+level: medium
+---
+
+# ============================================================
+# 6. PowerShell 调用 JavaScript 引擎
+# ============================================================
+
+title: PowerShell Invokes JavaScript Engine
+id: e6f7a8b9-1059-007-005-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测 PowerShell 调用 Windows Script Host 的 JScript 引擎。
+  攻击者使用 PowerShell 的 COM 对象调用 JScript 执行代码。
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.t1059.007
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  selection_jscript:
+    CommandLine|contains:
+      - 'New-Object -ComObject MSScriptControl.ScriptControl'
+      - 'MSScriptControl.ScriptControl'
+      - 'ScriptControl'
+      - '.Language = "JScript"'
+      - 'AddCode('
+      - 'Eval('
+  condition: selection_powershell and selection_jscript
+falsepositives:
+  - 合法的脚本集成
+level: high
+---
+
+# ============================================================
+# 7. Windows Script Host 持久化
+# ============================================================
+
+title: WSH Persistence via Registry
+id: e6f7a8b9-1059-007-006-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测通过注册表实现的 Windows Script Host 持久化。
+  攻击者修改注册表使 .vbs/.js 文件关联到恶意处理器。
+tags:
+  - attack.persistence
+  - attack.t1546
+  - attack.t1059.007
+logsource:
+  product: windows
+  service: security
+detection:
+  selection:
+    EventID: 4657
+    ObjectName|contains:
+      - '\\Classes\\.vbs'
+      - '\\Classes\\.js'
+      - '\\Classes\\.wsf'
+      - '\\Classes\\.jse'
+      - 'ShellEx\\Open'
+  condition: selection
+falsepositives:
+  - 安装/卸载脚本宿主软件
+level: medium
+---
+
+# ============================================================
+# 8. 混淆 JScript/VBScript 检测
+# ============================================================
+
+title: Obfuscated Script Execution
+id: e6f7a8b9-1059-007-007-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  检测混淆的 JScript/VBScript 代码执行。
+  攻击者使用 Chr()、String.fromCharCode、Base64 编码混淆恶意代码。
+tags:
+  - attack.defense_evasion
+  - attack.t1027
+  - attack.t1059.007
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_script_host:
+    Image|endswith:
+      - '\wscript.exe'
+      - '\cscript.exe'
+  selection_obfuscation:
+    CommandLine|contains:
+      # VBScript 混淆
+      - 'Chr('
+      - 'ChrW('
+      - 'Replace('
+      - 'Execute('
+      - 'ExecuteGlobal('
+      # JScript 混淆
+      - 'String.fromCharCode'
+      - 'unescape('
+      - 'atob('
+      - 'fromCharCode'
+      # 通用混淆
+      - 'Replace('
+      - 'Mid('
+      - 'InStr('
+  condition: selection_script_host and selection_obfuscation
+falsepositives:
+  - 合法的混淆脚本
+level: high
+---
+
+# ============================================================
+# 9. 攻击链关联
+# ============================================================
+
+title: JavaScript Abuse Attack Chain
+id: e6f7a8b9-1059-007-008-001
+status: experimental
+author: CodeShrimp
+date: 2026/05/12
+description: |
+  关联多个 JavaScript 滥用行为，识别完整攻击链。
+tags:
+  - attack.execution
+  - attack.t1059.007
+  - attack.chain
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection:
+    Image|endswith:
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+      - '\node.exe'
+  condition: selection
+  timeframe: 30m
+  threshold:
+    type: threshold
+    track: by_host
+    count: 3
+    seconds: 1800
+falsepositives: []
+level: critical

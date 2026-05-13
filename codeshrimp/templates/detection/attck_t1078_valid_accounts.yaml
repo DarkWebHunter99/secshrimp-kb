@@ -1,0 +1,272 @@
+# ============================================================
+# MITRE ATT&CK T1078 — Valid Accounts Detection
+# ============================================================
+# Technique: T1078 - Valid Accounts
+# Platform: Windows/Linux/macOS
+# Tactics: Initial Access, Persistence, Privilege Escalation, Defense Evasion
+# Covers: T1078.001 (Default Accounts), T1078.002 (Domain Accounts),
+#         T1078.003 (Local Accounts), T1078.004 (Cloud Accounts)
+# ============================================================
+
+title: Anomalous Logon from Unusual Source IP
+id: d4e5f6a7-1078-000-001
+status: stable
+description: |
+  Detects successful logons from IP addresses not seen in the historical baseline
+  for the user account, indicating potential credential theft or compromised account.
+references:
+  - https://attack.mitre.org/techniques/T1078/
+  - https://attack.mitre.org/techniques/T1078/002/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.initial_access
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1078
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_logon_success:
+    EventID: 4624
+    LogonType:
+      - 2    # Interactive
+      - 3    # Network
+      - 7    # Unlock
+      - 10   # RemoteInteractive (RDP)
+      - 11   # CachedInteractive
+  selection_anomalous_source:
+   IpAddress|startswith:
+      - '10.'
+      - '172.16.'
+      - '172.17.'
+      - '172.18.'
+      - '172.19.'
+      - '172.20.'
+      - '172.21.'
+      - '172.22.'
+      - '172.23.'
+      - '172.24.'
+      - '172.25.'
+      - '172.26.'
+      - '172.27.'
+      - '172.28.'
+      - '172.29.'
+      - '172.30.'
+      - '172.31.'
+      - '192.168.'
+  filter_system_accounts:
+    TargetUserName|endswith:
+      - '$'
+      - 'SYSTEM'
+  filter_computer_accounts:
+    TargetUserName|endswith:
+      - '$'
+  condition: selection_logon_success and selection_anomalous_source and not filter_system_accounts
+falsepositives:
+  - New employee accessing from different network segment
+  - VPN user with dynamic IP
+  - Remote worker from home network
+level: medium
+
+---
+
+title: Off-Hours Logon for Service Account
+id: d4e5f6a7-1078-000-002
+status: stable
+description: |
+  Detects logons by service accounts outside normal business hours,
+  which may indicate compromised service account credentials.
+references:
+  - https://attack.mitre.org/techniques/T1078/002/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.persistence
+  - attack.privilege_escalation
+  - attack.t1078.002
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_logon:
+    EventID: 4624
+    LogonType:
+      - 2    # Interactive
+      - 3    # Network
+      - 10   # RemoteInteractive
+  selection_service_account:
+    TargetUserName|endswith:
+      - 'svc_'
+      - '_svc'
+      - 'service'
+      - 'svcaccount'
+  selection_off_hours:
+    # Adjust these filters based on your organization's business hours
+    # Example: flag logons between 22:00 and 06:00 local time
+    # Use WorkstationName to filter known admin workstations
+    WorkstationName|contains:
+      - 'WORKSTATION'
+      - 'ADMIN'
+  condition: selection_logon and selection_service_account and selection_off_hours
+falsepositives:
+  - Legitimate off-hours maintenance
+  - Scheduled tasks running as service account
+level: high
+
+---
+
+title: Pass-the-Hash / Pass-the-Ticket Indicators
+id: d4e5f6a7-1078-000-003
+status: stable
+description: |
+  Detects indicators of Pass-the-Hash or Pass-the-Ticket attacks,
+  where stolen credentials are used without knowledge of the password.
+references:
+  - https://attack.mitre.org/techniques/T1550/002/
+  - https://attack.mitre.org/techniques/T1550/003/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.lateral_movement
+  - attack.t1550.002
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_logon_type3:
+    EventID: 4624
+    LogonType: 3
+    LogonProcessName: 'NtLmSsp'
+  selection_anonymously_logged_on:
+    EventID: 4624
+    LogonType: 3
+    TargetUserName: 'ANONYMOUS LOGON'
+  selection_logon_no_password:
+    EventID: 4624
+    LogonType: 3
+    KeyLength: 0
+  selection_kerberos_ticket:
+    EventID: 4768
+    TicketEncryptionType: '0x17'  # RC4 encryption (weak, suspicious)
+    TicketOptions: '0x40810010'
+  selection_kerberos_service:
+    EventID: 4769
+    TicketEncryptionType: '0x17'  # RC4
+    ServiceName: 'krbtgt'
+  condition: selection_logon_type3 or selection_anonymously_logged_on or selection_logon_no_password or selection_kerberos_ticket or selection_kerberos_service
+falsepositives:
+  - Legacy applications using NTLM authentication
+  - Kerberos RC4 encryption in mixed environments
+level: high
+
+---
+
+title: Suspicious Use of Built-in Admin Account
+id: d4e5f6a7-1078-000-004
+status: stable
+description: |
+  Detects suspicious usage of built-in Administrator or DefaultAccount,
+  which may indicate lateral movement using default credentials.
+references:
+  - https://attack.mitre.org/techniques/T1078/001/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.initial_access
+  - attack.t1078.001
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_admin_logon:
+    EventID: 4624
+    TargetUserName:
+      - 'Administrator'
+      - 'DefaultAccount'
+      - 'Guest'
+  selection_remote_access:
+    LogonType:
+      - 3    # Network
+      - 10   # RemoteInteractive
+  selection_rdp:
+    LogonType: 10
+    LogonProcessName: 'User32'
+  condition: selection_admin_logon and (selection_remote_access or selection_rdp)
+falsepositives:
+  - Legitimate administrator RDP access
+  - IT helpdesk using admin account for remote support
+level: high
+
+---
+
+title: Multiple Failed Logons Followed by Success (Credential Stuffing)
+id: d4e5f6a7-1078-000-005
+status: stable
+description: |
+  Detects patterns of multiple failed logon attempts followed by a successful
+  logon, indicating potential brute force or credential stuffing attacks.
+references:
+  - https://attack.mitre.org/techniques/T1110/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.credential_access
+  - attack.t1110
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_failed_logon:
+    EventID: 4625
+    LogonType:
+      - 2
+      - 3
+      - 10
+  condition: selection_failed_logon
+  timeframe: 5m
+  count(TargetUserName) by TargetUserName > 5
+falsepositives:
+  - User forgetting password
+  - Account lockout conditions
+  - Service account password rotation
+level: medium
+
+---
+
+title: Lateral Movement via PsExec with Valid Account
+id: d4e5f6a7-1078-000-006
+status: stable
+description: |
+  Detects PsExec usage with valid domain credentials for lateral movement,
+  a common technique after initial compromise.
+references:
+  - https://attack.mitre.org/techniques/T1021/002/
+  - https://attack.mitre.org/techniques/T1570/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.lateral_movement
+  - attack.t1021.002
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_psexec_service:
+    EventID: 7045
+    ServiceFileName|contains:
+      - 'PSEXESVC'
+      - 'psexesvc'
+  selection_psexec_process:
+    EventID: 1
+    Image|endswith: '\PSEXESVC.exe'
+  selection_remote_scheduled_task:
+    EventID: 4698
+    TaskContent|contains:
+      - 'PSEXESVC'
+  condition: selection_psexec_service or selection_psexec_process or selection_remote_scheduled_task
+falsepositives:
+  - Legitimate remote administration using PsExec
+  - SCCM and other management tools
+level: high

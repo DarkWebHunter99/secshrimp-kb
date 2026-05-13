@@ -1,0 +1,271 @@
+# ============================================================
+# MITRE ATT&CK T1059.001 — PowerShell 异常执行检测
+# ============================================================
+# Technique: T1059.001 - Command and Scripting Interpreter: PowerShell
+# Platform: Windows
+# Tactics: Execution
+# Sub-techniques covered: encoded commands, bypass, download cradle, AMSI bypass, WMI execution
+# ============================================================
+
+title: Suspicious PowerShell Encoded Command Execution
+id: b2c3d4e5-1059-001-001
+status: stable
+description: |
+  Detects PowerShell execution with encoded commands (-Enc/-EncodedCommand),
+  commonly used in attack chains to obfuscate malicious payloads.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://www.elastic.co/guide/en/security/current/powershell-encoded-command.html
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.execution
+  - attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  selection_encoded:
+    CommandLine|contains:
+      - '-enc '
+      - '-EncodedCommand '
+      - '-e '
+      - '-ec '
+  filter_legitimate:
+    ParentImage|endswith:
+      - '\sccm\ccmexec.exe'
+      - '\sccm\CmRcService.exe'
+      - '\chocolatey\choco.exe'
+      - '\ansible\ansible.exe'
+  condition: selection_powershell and selection_encoded and not filter_legitimate
+falsepositives:
+  - SCCM and other legitimate management tools
+  - Chocolatey package manager
+  - Ansible automation
+level: high
+
+---
+
+title: PowerShell Download Cradle Detection
+id: b2c3d4e5-1059-001-002
+status: stable
+description: |
+  Detects PowerShell commands that download and execute content from remote URLs,
+  a common technique for payload delivery and fileless malware execution.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://blog.menasec.net/2019/03/threat-hunting-25-powershell-and-batch.html
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.execution
+  - attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  selection_download_iex:
+    CommandLine|contains:
+      - 'IEX ('
+      - 'IEX(New-Object'
+      - 'Invoke-Expression'
+      - 'iex $'
+  selection_download WebClient:
+    CommandLine|contains:
+      - 'Net.WebClient'
+      - 'DownloadString'
+      - 'DownloadFile'
+      - 'DownloadData'
+      - 'Invoke-WebRequest'
+      - 'wget '
+      - 'curl '
+  selection_download_start:
+    CommandLine|contains:
+      - 'Start-BitsTransfer'
+      - 'Invoke-WebRequest -Uri'
+      - 'iwr '
+      - 'irm '
+      - 'Start-Process'
+  condition: selection_powershell and (selection_download_iex or selection_download WebClient or selection_download_start)
+falsepositives:
+  - Legitimate software updates using PowerShell
+  - IT automation scripts
+level: high
+
+---
+
+title: PowerShell AMSI Bypass Attempt
+id: b2c3d4e5-1059-001-003
+status: stable
+description: |
+  Detects attempts to bypass Antimalware Scan Interface (AMSI),
+  a defense evasion technique commonly used before payload execution.
+references:
+  - https://attack.mitre.org/techniques/T1562/001/
+  - https://amsi.fail/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1562.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  selection_amsi_bypass:
+    CommandLine|contains:
+      - 'AmsiUtils'
+      - 'amsiInitFailed'
+      - 'AmsiScanBuffer'
+      - 'AmsiOpenSession'
+      - '[Ref].Assembly'
+      - 'System.Management.Automation.AmsiUtils'
+      - 'amsi.dll'
+  selection_amsi_disable:
+    CommandLine|contains:
+      - 'Set-MpPreference -DisableRealtimeMonitoring'
+      - 'Set-MpPreference -DisableBehaviorMonitoring'
+      - 'Set-MpPreference -DisableIOAVProtection'
+  condition: selection_powershell and (selection_amsi_bypass or selection_amsi_disable)
+falsepositives:
+  - Security research and testing (in lab environments)
+  - Legitimate AMSI troubleshooting
+level: critical
+
+---
+
+title: PowerShell WMI Execution
+id: b2c3d4e5-1059-001-004
+status: stable
+description: |
+  Detects PowerShell executing commands via WMI (Win32_Process Create),
+  commonly used for lateral movement and remote code execution.
+references:
+  - https://attack.mitre.org/techniques/T1047/
+  - https://attack.mitre.org/techniques/T1059/001/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.execution
+  - attack.t1047
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_powershell_wmi:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Invoke-WmiMethod'
+      - 'Invoke-CimMethod'
+      - 'Get-WmiObject'
+      - 'wmic '
+      - 'Win32_Process'
+      - 'Win32_ProcessCreate'
+  selection_wmi_powershell:
+    Image|endswith:
+      - '\wmiprvse.exe'
+    CommandLine|contains:
+      - 'powershell'
+      - 'pwsh'
+  condition: selection_powershell_wmi or selection_wmi_powershell
+falsepositives:
+  - Legitimate remote administration
+  - SCCM and other management tools
+level: high
+
+---
+
+title: PowerShell Suspicious Clipboard and Input Monitoring
+id: b2c3d4e5-1059-001-005
+status: stable
+description: |
+  Detects PowerShell accessing clipboard or keyboard input, which may indicate
+  credential harvesting or data collection.
+references:
+  - https://attack.mitre.org/techniques/T1115/
+  - https://attack.mitre.org/techniques/T1056/001/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.collection
+  - attack.credential_access
+  - attack.t1115
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  selection_clipboard:
+    CommandLine|contains:
+      - 'Get-Clipboard'
+      - 'Set-Clipboard'
+      - 'System.Windows.Forms.Clipboard'
+      - 'TextCopy'
+  selection_keylogger:
+    CommandLine|contains:
+      - 'GetAsyncKeyState'
+      - 'SetWindowsHookEx'
+      - 'RegisterHotKey'
+      - 'System.Windows.Input.Keyboard'
+      - 'Get-KeyboardState'
+  condition: selection_powershell and (selection_clipboard or selection_keylogger)
+falsepositives:
+  - IT scripts that manage clipboard
+  - Accessibility tools
+level: high
+
+---
+
+title: PowerShell Script Block Logging Disabled
+id: b2c3d4e5-1059-001-006
+status: stable
+description: |
+  Detects attempts to disable PowerShell script block logging,
+  which may indicate defense evasion.
+references:
+  - https://attack.mitre.org/techniques/T1562/001/
+author: CodeShrimp (auto-generated)
+date: 2026/05/11
+tags:
+  - attack.defense_evasion
+  - attack.t1562.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_powershell:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+  selection_disable_logging:
+    CommandLine|contains:
+      - 'Set-ItemProperty'
+      - 'Remove-ItemProperty'
+    CommandLine|contains|all:
+      - 'ScriptBlockLogging'
+      - 'EnableScriptBlockLogging'
+      - '0'
+  selection_transcription_disable:
+    CommandLine|contains:
+      - 'EnableTranscripting'
+  condition: selection_powershell and (selection_disable_logging or selection_transcription_disable)
+falsepositives:
+  - IT administrators configuring logging policy
+level: medium
