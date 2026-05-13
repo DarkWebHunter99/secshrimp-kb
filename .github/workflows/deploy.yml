@@ -2,7 +2,7 @@ name: Deploy Knowledge Base
 
 on:
   push:
-    branches: [ main ]
+    branches: [ main, master ]
   workflow_dispatch:
 
 permissions:
@@ -28,7 +28,7 @@ jobs:
         run: |
           echo "Building knowledge base site..."
           echo "Files:"
-          ls -la security/ malware-detect/ 2>/dev/null || true
+          ls -la secshrimp/ codeshrimp/ shared/ 2>/dev/null || true
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
