@@ -86,3 +86,11 @@
 ---
 
 _→ 防御详见 [`defense/web-defense.md`](../defense/web-defense.md) AI 章节_
+
+---
+
+## 📎 相关主题
+
+- **Agent 安全：** [gent-security.md](agent-security.md) — 工具滥用 / 沙箱逃逸
+- **MCP 安全：** [mcp-security.md](mcp-security.md) — MCP 供应链攻击
+- **供应链：** [ttacks/supply-chain.md](../attacks/supply-chain.md) — 依赖混淆 / CI-CD 投毒

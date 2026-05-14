@@ -217,3 +217,12 @@
 
 _→ 参见 [`QUICK-REF.md`](../QUICK-REF.md) 获取速查 Payload_
 _→ 防御策略详见 [`defense/web-defense.md`](../defense/web-defense.md)_
+
+---
+
+## 📎 相关主题
+
+- **防御：** [defense/web-defense.md](../defense/web-defense.md) — Web 安全防御策略
+- **工具：** [	ools/burp-suite.md](../tools/burp-suite.md) — Burp Suite 实战
+- **速查：** [QUICK-REF.md](../QUICK-REF.md) — SQL 注入 / SSRF 速查
+- **AI 安全：** [i-security/prompt-injection.md](../ai-security/prompt-injection.md) — Prompt Injection（新型注入攻击）

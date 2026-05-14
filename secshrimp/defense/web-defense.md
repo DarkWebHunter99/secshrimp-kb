@@ -127,3 +127,11 @@ UPDATE users SET balance = balance - 100 WHERE id = 1 AND balance >= 100;
 
 _→ 参见 [`defense/network-defense.md`](network-defense.md) 获取网络层防御_
 _→ 参见 [`defense/endpoint-defense.md`](endpoint-defense.md) 获取端点防护_
+
+---
+
+## 📎 相关主题
+
+- **攻击：** [ttacks/web-attacks.md](../attacks/web-attacks.md) — Web 攻击手法
+- **工具：** [	ools/burp-suite.md](../tools/burp-suite.md) — Burp Suite 安全测试
+- **API 安全：** [ttacks/api-cicd-attacks.md](../attacks/api-cicd-attacks.md) — API 攻击

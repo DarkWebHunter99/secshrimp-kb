@@ -59,3 +59,11 @@
 
 _→ Prompt Injection 详见 [`ai-security/prompt-injection.md`](prompt-injection.md)_
 _→ MCP 安全详见 [`ai-security/mcp-security.md`](mcp-security.md)_
+
+---
+
+## 📎 相关主题
+
+- **Prompt Injection：** [prompt-injection.md](prompt-injection.md) — 注入技术与防御
+- **MCP 安全：** [mcp-security.md](mcp-security.md) — MCP 协议安全
+- **云安全：** [ttacks/cloud-attacks.md](../attacks/cloud-attacks.md) — 云环境攻击

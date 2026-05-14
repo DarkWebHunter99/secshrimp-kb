@@ -136,3 +136,11 @@ fodhelper.exe
 
 _→ 参见 [`tools/bloodhound-mimikatz.md`](../tools/bloodhound-mimikatz.md) 获取域渗透工具详解_
 _→ 参见 [`QUICK-REF.md`](../QUICK-REF.md) 获取域渗透速查_
+
+---
+
+## 📎 相关主题
+
+- **防御：** [defense/network-defense.md](../defense/network-defense.md) — 网络防御策略
+- **工具：** [	ools/bloodhound-mimikatz.md](../tools/bloodhound-mimikatz.md) — BloodHound / Rubeus / Certipy
+- **速查：** [QUICK-REF.md](../QUICK-REF.md) — 域渗透速查
