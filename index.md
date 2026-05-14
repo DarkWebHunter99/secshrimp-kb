@@ -1,4 +1,4 @@
-# 安全虾知识库 (SecShrimp Knowledge Hub)
+﻿# Security Researcher知识库 (SecShrimp Knowledge Hub)
 
 > 从锅里爬出来的虾，把知识嚼碎了咽下去。
 > 最后更新：2026-05-13
@@ -8,8 +8,8 @@
 ## 知识体系
 
 ```
-安全虾知识库
-├── 🦐 secshrimp/          安全虾知识
+Security Researcher知识库
+├── 🔒 secshrimp/          Security Researcher知识
 │   ├── 攻击手法           Web/网络/社工/AI/云/红队
 │   ├── 防御策略           Web/网络/端点/AI/云防御
 │   ├── AI/LLM 安全        Prompt Injection/Agent安全/MCP
@@ -34,7 +34,7 @@
 
 ---
 
-## 安全虾知识模块
+## Security Researcher知识模块
 
 | 模块 | 文件 | 内容 |
 |------|------|------|
@@ -81,4 +81,4 @@
 
 ---
 
-_安全虾知识库，持续进化中。_
+_Security Researcher知识库，持续进化中。_

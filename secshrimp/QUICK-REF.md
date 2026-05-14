@@ -1,4 +1,4 @@
-# ⚡ 安全虾速查手册 (Quick Reference)
+﻿# ⚡ Security Researcher速查手册 (Quick Reference)
 
 > _一页一个主题，可打印。最后更新：2026-05-14_
 
@@ -202,4 +202,4 @@ fodhelper.exe
 
 ---
 
-_安全虾的速查手册，打印一份放桌上。🦐_
+_Security Researcher的速查手册，打印一份放桌上。🔒_

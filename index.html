@@ -1,10 +1,10 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SecShrimp Knowledge Hub</title>
-<meta name="description" content="安全虾知识库 — 从锅里爬出来的虾，脑子里装满了安全弹药。覆盖 Web/网络/云/AI/工具的全栈安全知识体系。">
+<meta name="description" content="Security Knowledge Hub — 系统化的网络安全知识体系，覆盖攻击、防御、工具与实战。覆盖 Web/网络/云/AI/工具的全栈安全知识体系。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -126,28 +126,28 @@ a:hover{text-decoration:underline}
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
     <div class="logo">
-      <span class="logo-emoji">🦐</span>
-      <span class="logo-text">安全虾知识库</span>
+      <span class="logo-emoji">🔒</span>
+      <span class="logo-text">Security Knowledge Hub</span>
     </div>
     <div class="logo-sub">SecShrimp Knowledge Hub</div>
   </div>
   <nav class="nav-sec" id="nav-container"></nav>
   <button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
-  <div class="sidebar-footer" id="sidebar-footer">🦐 安全虾 · 加载中...</div>
+  <div class="sidebar-footer" id="sidebar-footer">🔒 Security Researcher · 加载中...</div>
 </aside>
 
 <div class="main">
   <div class="topbar">
     <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-    <div class="topbar-title">🦐 安全虾知识库</div>
+    <div class="topbar-title">🔒 Security Knowledge Hub</div>
     <div class="topbar-meta" id="topbar-meta">加载中...</div>
   </div>
   <div class="content">
     <div class="hero">
-      <div class="hero-badge">🦐 SECURITY KNOWLEDGE HUB</div>
-      <h1>安全虾知识库</h1>
-      <p class="hero-sub">从锅里爬出来的虾，脑子里装满了安全弹药。覆盖攻击/防御/AI/工具的全栈安全知识体系。</p>
-      <div class="hero-quote">"最好的防御，是比攻击者更了解攻击。"</div>
+      <div class="hero-badge">🔒 SECURITY KNOWLEDGE HUB</div>
+      <h1>Security Knowledge Hub</h1>
+      <p class="hero-sub">系统化的网络安全知识体系，覆盖攻击、防御、工具与实战。覆盖攻击/防御/AI/工具的全栈安全知识体系。</p>
+      <div class="hero-quote">"深入理解攻击，才能构建有效的防御。"</div>
       <div class="stats" id="stats-container"></div>
     </div>
 
@@ -332,7 +332,7 @@ function updateStats() {
 }
 
 function updateFooter() {
-  document.getElementById('sidebar-footer').innerHTML = `🦐 安全虾 · ${KB.length} 模块 · ${totalLines}+ 行<br>${new Date().toISOString().split('T')[0]}`;
+  document.getElementById('sidebar-footer').innerHTML = `🔒 Security Researcher · ${KB.length} 模块 · ${totalLines}+ 行<br>${new Date().toISOString().split('T')[0]}`;
 }
 
 function setupScrollSpy() {

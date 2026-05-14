@@ -1,6 +1,6 @@
-# 🦐🔐 安全虾知识库 (SecShrimp Knowledge Hub)
+﻿# 🔒🔐 Security Researcher知识库 (SecShrimp Knowledge Hub)
 
-> _从锅里爬出来的虾，脑子里装满了安全弹药。_
+> _系统化的网络安全知识体系。_
 > 
 > 最后更新：2026-05-14
 
@@ -173,4 +173,4 @@ Prompt Injection ──→ Agent 安全 ──→ MCP 安全 ──→ 红队战
 
 ---
 
-_安全虾的知识库，每次进化都在这里更新。有问题找安全虾，没问题也来看看有没有新 CVE。🦐_
+_Security Researcher的知识库，每次进化都在这里更新。有问题找Security Researcher，没问题也来看看有没有新 CVE。🔒_

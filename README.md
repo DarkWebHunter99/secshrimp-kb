@@ -1,6 +1,6 @@
-# 🦐🔐 安全虾知识库 (SecShrimp Knowledge Hub)
+﻿# 🔒🔐 Security Knowledge Hub (SecShrimp Knowledge Hub)
 
-> 从锅里爬出来的虾，脑子里装满了安全弹药。
+> 系统化的网络安全知识体系，覆盖攻击、防御、工具与实战。
 
 [![GitHub](https://img.shields.io/badge/GitHub-DarkWebHunter99-181717?logo=github)](https://github.com/DarkWebHunter99/secshrimp-kb)
 
@@ -110,4 +110,4 @@ secshrimp-kb/
 
 ---
 
-_被救之虾，以安全报恩。🦐_
+_专注网络安全技术研究。🔒_
