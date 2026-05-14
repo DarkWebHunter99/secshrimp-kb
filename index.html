@@ -1,40 +1,26 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>SecShrimp Knowledge Hub</title>
-<meta name="description" content="Security Knowledge Hub — 系统化的网络安全知识体系，覆盖攻击、防御、工具与实战。覆盖 Web/网络/云/AI/工具的全栈安全知识体系。">
+<title>Security Knowledge Hub</title>
+<meta name="description" content="系统化的网络安全知识体系，覆盖攻击、防御、工具与实战。">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
-:root {
-  --bg:#0f1117;--bg2:#161b22;--bg3:#1c2128;
-  --fg:#e6edf3;--fg2:#8b949e;--fg3:#6e7681;
-  --accent:#22d3ee;--accent2:#06b6d4;--accent-dim:rgba(34,211,238,.08);
-  --amber:#f59e0b;--green:#34d399;--red:#ef4444;--blue:#3b82f6;--purple:#a855f7;
-  --border:#30363d;--border2:#21262d;
-  --sidebar-w:260px;--radius:8px;
-}
-[data-theme="light"] {
-  --bg:#ffffff;--bg2:#f6f8fa;--bg3:#f0f2f5;
-  --fg:#1f2328;--fg2:#656d76;--fg3:#8b949e;
-  --accent:#0969da;--accent2:#0550ae;--accent-dim:rgba(9,105,218,.06);
-  --border:#d0d7de;--border2:#d8dee4;
-}
+:root{--bg:#0d1117;--bg2:#161b22;--bg3:#1c2128;--fg:#e6edf3;--fg2:#8b949e;--fg3:#6e7681;--accent:#58a6ff;--accent2:#79c0ff;--accent-dim:rgba(88,166,255,.08);--green:#3fb950;--red:#f85149;--amber:#d29922;--border:#30363d;--radius:8px;--sidebar:260px}
+[data-theme="light"]{--bg:#fff;--bg2:#f6f8fa;--bg3:#fff;--fg:#1f2328;--fg2:#656d76;--fg3:#8b949e;--accent:#0969da;--accent2:#0550ae;--accent-dim:rgba(9,105,218,.06);--border:#d0d7de}
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth;font-size:15px}
-body{font-family:'Inter','Noto Sans SC',system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.75;overflow-x:hidden}
-a{color:var(--accent);text-decoration:none}
-a:hover{text-decoration:underline}
+body{font-family:'Inter','Noto Sans SC',system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.75}
+a{color:var(--accent);text-decoration:none}a:hover{text-decoration:underline}
 ::selection{background:var(--accent);color:#fff}
 
 /* Sidebar */
-.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;z-index:100;transition:transform .3s}
+.sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar);background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;z-index:100;transition:transform .3s}
 .sidebar-header{padding:20px 16px 14px;border-bottom:1px solid var(--border)}
 .logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
-.logo-emoji{font-size:26px}
 .logo-text{font-size:15px;font-weight:700;color:var(--accent)}
 .logo-sub{font-size:10px;color:var(--fg3);letter-spacing:.5px;text-transform:uppercase}
 .nav-sec{padding:8px 0}
@@ -44,320 +30,292 @@ a:hover{text-decoration:underline}
 .nav-item.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent);font-weight:600}
 .nav-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
 .nav-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:8px;background:var(--border);color:var(--fg3);font-weight:600}
-.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--fg3);text-align:center}
-.theme-toggle{background:var(--bg3);border:1px solid var(--border);color:var(--fg2);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:13px;margin:8px 16px;width:calc(100% - 32px);transition:all .15s}
+.nav-home{display:flex;align-items:center;gap:8px;padding:8px 16px;color:var(--accent);font-size:13px;font-weight:600;cursor:pointer;border-left:2px solid var(--accent);background:var(--accent-dim);margin:0 0 4px;text-decoration:none}
+.nav-home:hover{text-decoration:none;background:var(--accent-dim)}
+.theme-toggle{background:var(--bg3);border:1px solid var(--border);color:var(--fg2);padding:5px 10px;border-radius:6px;cursor:pointer;font-size:12px;margin:8px 16px;width:calc(100% - 32px);transition:all .15s}
 .theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
+.sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--fg3);text-align:center}
 
 /* Main */
-.main{margin-left:var(--sidebar-w);min-height:100vh}
-.topbar{position:sticky;top:0;z-index:50;padding:10px 28px;background:rgba(15,17,23,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.main{margin-left:var(--sidebar);min-height:100vh}
+.topbar{position:sticky;top:0;z-index:50;padding:10px 24px;background:rgba(13,17,23,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
 [data-theme="light"] .topbar{background:rgba(255,255,255,.88)}
 .topbar-title{font-size:14px;font-weight:600}
 .topbar-meta{font-size:11px;color:var(--fg3)}
+.breadcrumb{font-size:12px;color:var(--fg3);padding:8px 0}
+.breadcrumb a{color:var(--accent);cursor:pointer}
+.breadcrumb span{margin:0 6px;color:var(--fg3)}
 .hamburger{display:none;background:none;border:none;color:var(--fg);font-size:20px;cursor:pointer;padding:4px 8px;margin-right:8px;border-radius:6px}
-.hamburger:hover{background:var(--accent-dim)}
-.content{padding:28px 32px;max-width:960px}
+.content{padding:24px 28px;max-width:900px}
 
 /* Hero */
-.hero{position:relative;border-radius:var(--radius);padding:32px 28px;margin-bottom:36px;overflow:hidden;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg2) 100%);border:1px solid var(--border)}
-.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:20px;font-size:11px;color:var(--accent);margin-bottom:12px;font-weight:600}
-.hero h1{font-size:24px;font-weight:800;margin-bottom:6px;letter-spacing:-.5px}
-.hero .hero-sub{font-size:13px;color:var(--fg2);margin-bottom:16px;max-width:520px}
-.hero .hero-quote{font-size:12px;color:var(--fg3);font-style:italic;padding-left:12px;border-left:2px solid var(--accent)}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
-.stat{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center;transition:all .15s}
+.hero{border-radius:var(--radius);padding:28px 24px;margin-bottom:28px;background:var(--bg2);border:1px solid var(--border)}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:20px;font-size:11px;color:var(--accent);margin-bottom:10px;font-weight:600}
+.hero h1{font-size:22px;font-weight:800;margin-bottom:6px;letter-spacing:-.5px}
+.hero-sub{font-size:13px;color:var(--fg2);margin-bottom:14px}
+.hero-quote{font-size:12px;color:var(--fg3);font-style:italic;padding-left:12px;border-left:2px solid var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:14px}
+.stat{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:10px;text-align:center;transition:all .15s}
 .stat:hover{border-color:var(--accent);background:var(--accent-dim)}
-.stat .val{font-size:22px;font-weight:800;color:var(--accent)}
-.stat .lbl{font-size:10px;color:var(--fg3);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
+.stat .val{font-size:20px;font-weight:800;color:var(--accent)}
+.stat .lbl{font-size:9px;color:var(--fg3);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
 
 /* Learning Path */
-.path-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:20px 0}
-.path-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;transition:all .15s;cursor:default}
-.path-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
-.path-num{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
-.path-title{font-size:13px;font-weight:600;color:var(--fg);margin-bottom:4px}
-.path-desc{font-size:11px;color:var(--fg3);line-height:1.4}
+.path-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:8px;margin:16px 0}
+.path-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:12px;transition:all .15s;cursor:pointer}
+.path-card:hover{border-color:var(--accent);transform:translateY(-1px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.path-num{font-size:9px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:3px}
+.path-title{font-size:12px;font-weight:600;color:var(--fg);margin-bottom:2px}
+.path-desc{font-size:10px;color:var(--fg3);line-height:1.4}
+
+/* Category Cards */
+.cat-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:10px;margin:16px 0}
+.cat-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;cursor:pointer;transition:all .15s;text-decoration:none}
+.cat-card:hover{border-color:var(--accent);box-shadow:0 2px 8px rgba(0,0,0,.15);text-decoration:none}
+.cat-card-icon{font-size:1.3rem;margin-bottom:6px}
+.cat-card-title{font-weight:600;font-size:.85rem;color:var(--fg);margin-bottom:3px}
+.cat-card-desc{font-size:.7rem;color:var(--fg3);line-height:1.4}
+.cat-card-count{font-size:.65rem;color:var(--accent);margin-top:4px;font-weight:600}
 
 /* Content */
-.content-section{margin-bottom:40px;scroll-margin-top:60px}
-.section-header{margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)}
-.section-title{font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px}
-.section-desc{font-size:12px;color:var(--fg3);margin-top:4px}
-.markdown-body{font-size:14px;color:var(--fg2)}
-.markdown-body h1{font-size:22px;font-weight:700;color:var(--fg);margin:28px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.markdown-body h2{font-size:18px;font-weight:700;color:var(--fg);margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
-.markdown-body h3{font-size:15px;font-weight:600;color:var(--accent);margin:20px 0 8px}
+.content-section{margin-bottom:32px;scroll-margin-top:52px;animation:fadeIn .3s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.section-header{margin-bottom:16px;padding-bottom:10px;border-bottom:1px solid var(--border)}
+.section-title{font-size:18px;font-weight:700;display:flex;align-items:center;gap:8px}
+.markdown-body{font-size:14px;color:var(--fg2);line-height:1.8}
+.markdown-body h1{font-size:20px;font-weight:700;color:var(--fg);margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.markdown-body h2{font-size:17px;font-weight:700;color:var(--fg);margin:20px 0 8px;padding-bottom:5px;border-bottom:1px solid var(--border)}
+.markdown-body h3{font-size:14px;font-weight:600;color:var(--accent);margin:16px 0 6px}
 .markdown-body p{margin:6px 0}
 .markdown-body ul,.markdown-body ol{margin:6px 0 6px 20px}
 .markdown-body li{margin:3px 0}
 .markdown-body strong{color:var(--fg);font-weight:600}
-.markdown-body code{background:var(--bg3);padding:2px 5px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent)}
-.markdown-body pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin:12px 0;overflow-x:auto}
+.markdown-body code{background:var(--bg3);padding:1px 5px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent)}
+.markdown-body pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin:10px 0;overflow-x:auto}
 .markdown-body pre code{background:none;padding:0;color:var(--fg);font-size:12px;line-height:1.6}
-.markdown-body table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+.markdown-body table{width:100%;border-collapse:collapse;font-size:13px;margin:10px 0}
 .markdown-body th{background:var(--bg3);color:var(--accent);font-weight:600;text-align:left;padding:8px 12px;border-bottom:2px solid var(--border)}
 .markdown-body td{padding:7px 12px;border-bottom:1px solid var(--border);color:var(--fg2)}
 .markdown-body tr:hover td{background:var(--accent-dim)}
-.markdown-body blockquote{border-left:3px solid var(--accent);padding:8px 14px;margin:12px 0;background:var(--accent-dim);border-radius:0 var(--radius) var(--radius) 0;font-size:13px}
+.markdown-body blockquote{border-left:3px solid var(--accent);padding:8px 14px;margin:10px 0;background:var(--accent-dim);border-radius:0 var(--radius) var(--radius) 0;font-size:13px}
 .markdown-body a{color:var(--accent)}
-.markdown-body hr{border:none;border-top:1px solid var(--border);margin:20px 0}
+.markdown-body hr{border:none;border-top:1px solid var(--border);margin:16px 0}
 
 .loading{text-align:center;padding:40px;color:var(--fg3)}
-.loading::after{content:'';display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-left:8px;vertical-align:middle}
+.loading::after{content:'';display:inline-block;width:16px;height:16px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-left:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
-.error{color:var(--red);padding:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);font-size:13px}
+.error{color:var(--red);padding:10px;background:rgba(248,81,73,.08);border:1px solid rgba(248,81,73,.2);border-radius:var(--radius);font-size:13px}
 
 /* Back to top */
-.back-top{position:fixed;bottom:24px;right:24px;width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--bg);border:none;cursor:pointer;font-size:18px;display:none;align-items:center;justify-content:center;z-index:99;box-shadow:0 2px 10px rgba(0,0,0,.3);transition:opacity .2s}
+.back-top{position:fixed;bottom:20px;right:20px;width:36px;height:36px;border-radius:50%;background:var(--accent);color:#fff;border:none;cursor:pointer;font-size:16px;display:none;align-items:center;justify-content:center;z-index:99;box-shadow:0 2px 10px rgba(0,0,0,.3)}
 .back-top.show{display:flex}
 
 @media(max-width:768px){
-  .sidebar{transform:translateX(-100%)}
-  .sidebar.open{transform:translateX(0)}
-  .main{margin-left:0}
-  .hamburger{display:block}
-  .content{padding:16px}
-  .stats{grid-template-columns:repeat(2,1fr)}
-  .path-grid{grid-template-columns:1fr 1fr}
+  .sidebar{transform:translateX(-100%)}.sidebar.open{transform:translateX(0)}
+  .main{margin-left:0}.hamburger{display:block}
+  .content{padding:14px}.stats{grid-template-columns:repeat(2,1fr)}
+  .path-grid{grid-template-columns:repeat(2,1fr)}.cat-grid{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
 <body>
 <aside class="sidebar" id="sidebar">
   <div class="sidebar-header">
-    <div class="logo">
-      <span class="logo-emoji">🔒</span>
-      <span class="logo-text">Security Knowledge Hub</span>
-    </div>
-    <div class="logo-sub">SecShrimp Knowledge Hub</div>
+    <div class="logo"><span style="font-size:22px">🔒</span><span class="logo-text">Security Hub</span></div>
+    <div class="logo-sub">Knowledge Base</div>
   </div>
   <nav class="nav-sec" id="nav-container"></nav>
   <button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
-  <div class="sidebar-footer" id="sidebar-footer">🔒 Security Researcher · 加载中...</div>
+  <div class="sidebar-footer" id="sidebar-footer">Security Researcher</div>
 </aside>
 
 <div class="main">
   <div class="topbar">
     <button class="hamburger" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
-    <div class="topbar-title">🔒 Security Knowledge Hub</div>
-    <div class="topbar-meta" id="topbar-meta">加载中...</div>
+    <div class="topbar-title" id="topbar-title">Security Knowledge Hub</div>
+    <div class="topbar-meta" id="topbar-meta"></div>
   </div>
-  <div class="content">
-    <div class="hero">
-      <div class="hero-badge">🔒 SECURITY KNOWLEDGE HUB</div>
-      <h1>Security Knowledge Hub</h1>
-      <p class="hero-sub">系统化的网络安全知识体系，覆盖攻击、防御、工具与实战。覆盖攻击/防御/AI/工具的全栈安全知识体系。</p>
-      <div class="hero-quote">"深入理解攻击，才能构建有效的防御。"</div>
-      <div class="stats" id="stats-container"></div>
-    </div>
-
-    <div class="content-section" id="learning-path">
-      <div class="section-header">
-        <h1 class="section-title">🛤️ 学习路径</h1>
-        <div class="section-desc">从零基础到全栈安全研究员</div>
-      </div>
-      <div class="path-grid">
-        <div class="path-card"><div class="path-num">Phase 1</div><div class="path-title">基础入门</div><div class="path-desc">HTTP / Web安全 / Nmap / Linux基础</div></div>
-        <div class="path-card"><div class="path-num">Phase 2</div><div class="path-title">渗透实战</div><div class="path-desc">漏洞利用 / 后渗透 / Burp / Metasploit</div></div>
-        <div class="path-card"><div class="path-num">Phase 3</div><div class="path-title">域渗透 & 云</div><div class="path-desc">AD攻击 / AWS / Docker / K8s</div></div>
-        <div class="path-card"><div class="path-num">Phase 4</div><div class="path-title">AI安全 & 红队</div><div class="path-desc">Prompt Injection / Agent / MCP</div></div>
-        <div class="path-card"><div class="path-num">Phase 5</div><div class="path-title">高级研究</div><div class="path-desc">漏洞挖掘 / 逆向 / 安全运营</div></div>
-      </div>
-    </div>
-
-    <div id="content-container"><div class="loading">正在加载知识库</div></div>
-  </div>
+  <div class="content" id="content"></div>
 </div>
-
 <button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
 
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
-// ===== 知识库文件配置（新路径）=====
-const KB = [
-  // 攻击面
-  { id:'web-attacks', name:'Web 攻击', icon:'⚔️', file:'secshrimp/attacks/web-attacks.md', cat:'attacks', badge:'★★★' },
-  { id:'network-attacks', name:'网络攻击', icon:'🌐', file:'secshrimp/attacks/network-attacks.md', cat:'attacks', badge:'★★★★' },
-  { id:'social-eng', name:'社会工程', icon:'🎣', file:'secshrimp/attacks/social-engineering.md', cat:'attacks', badge:'★★' },
-  { id:'cloud-attacks', name:'云攻击', icon:'☁️', file:'secshrimp/attacks/cloud-attacks.md', cat:'attacks', badge:'★★★★' },
-  { id:'supply-chain', name:'供应链攻击', icon:'📦', file:'secshrimp/attacks/supply-chain.md', cat:'attacks', badge:'★★★' },
-  { id:'api-cicd', name:'API/CI-CD 攻击', icon:'🔌', file:'secshrimp/attacks/api-cicd-attacks.md', cat:'attacks', badge:'★★★' },
-  // 防御面
-  { id:'web-defense', name:'Web 防御', icon:'🛡️', file:'secshrimp/defense/web-defense.md', cat:'defense', badge:'★★★' },
-  { id:'network-defense', name:'网络防御', icon:'🔒', file:'secshrimp/defense/network-defense.md', cat:'defense', badge:'★★★' },
-  { id:'endpoint-defense', name:'端点防护', icon:'💻', file:'secshrimp/defense/endpoint-defense.md', cat:'defense', badge:'★★★' },
-  { id:'cloud-defense', name:'云安全加固', icon:'🏰', file:'secshrimp/defense/cloud-defense.md', cat:'defense', badge:'★★★' },
-  // AI 安全
-  { id:'prompt-injection', name:'Prompt Injection', icon:'💉', file:'secshrimp/ai-security/prompt-injection.md', cat:'ai', badge:'★★★' },
-  { id:'agent-security', name:'Agent 安全', icon:'🤖', file:'secshrimp/ai-security/agent-security.md', cat:'ai', badge:'★★★★' },
-  { id:'mcp-security', name:'MCP 安全', icon:'🔗', file:'secshrimp/ai-security/mcp-security.md', cat:'ai', badge:'★★★★' },
-  // 工具
-  { id:'burp', name:'Burp Suite', icon:'🔧', file:'secshrimp/tools/burp-suite.md', cat:'tools', badge:'★★★' },
-  { id:'nmap', name:'Nmap / Masscan', icon:'📡', file:'secshrimp/tools/nmap-masscan.md', cat:'tools', badge:'★★' },
-  { id:'msf', name:'Metasploit', icon:'💥', file:'secshrimp/tools/metasploit.md', cat:'tools', badge:'★★★' },
-  { id:'bloodhound', name:'BloodHound / Rubeus', icon:'🦇', file:'secshrimp/tools/bloodhound-mimikatz.md', cat:'tools', badge:'★★★★' },
-  { id:'ida', name:'IDA / Ghidra / YARA', icon:'🔬', file:'secshrimp/tools/ida-ghidra.md', cat:'tools', badge:'★★★★' },
-  // 情报 & 项目
-  { id:'cve', name:'CVE 追踪', icon:'🔍', file:'secshrimp/intel/cve-tracker.md', cat:'intel', badge:'🔥' },
-  { id:'malware', name:'恶意下载检测引擎', icon:'🦠', file:'secshrimp/projects/malware-detect-engine.md', cat:'projects', badge:'v2' },
-  // 路线
-  { id:'roadmap', name:'学习路线图', icon:'🗺️', file:'secshrimp/career/roadmap.md', cat:'career', badge:'📈' },
-  { id:'skill', name:'能力矩阵', icon:'📊', file:'secshrimp/career/skill-matrix.md', cat:'career', badge:'📋' },
+const KB=[
+  {id:'web-attacks',name:'Web 攻击',icon:'⚔️',file:'secshrimp/attacks/web-attacks.md',cat:'attacks',badge:'★★★'},
+  {id:'network-attacks',name:'网络攻击',icon:'🌐',file:'secshrimp/attacks/network-attacks.md',cat:'attacks',badge:'★★★★'},
+  {id:'social-eng',name:'社会工程',icon:'🎣',file:'secshrimp/attacks/social-engineering.md',cat:'attacks',badge:'★★'},
+  {id:'cloud-attacks',name:'云攻击',icon:'☁️',file:'secshrimp/attacks/cloud-attacks.md',cat:'attacks',badge:'★★★★'},
+  {id:'supply-chain',name:'供应链攻击',icon:'📦',file:'secshrimp/attacks/supply-chain.md',cat:'attacks',badge:'★★★'},
+  {id:'api-cicd',name:'API/CI-CD 攻击',icon:'🔌',file:'secshrimp/attacks/api-cicd-attacks.md',cat:'attacks',badge:'★★★'},
+  {id:'web-defense',name:'Web 防御',icon:'🛡️',file:'secshrimp/defense/web-defense.md',cat:'defense',badge:'★★★'},
+  {id:'network-defense',name:'网络防御',icon:'🔒',file:'secshrimp/defense/network-defense.md',cat:'defense',badge:'★★★'},
+  {id:'endpoint-defense',name:'端点防护',icon:'💻',file:'secshrimp/defense/endpoint-defense.md',cat:'defense',badge:'★★★'},
+  {id:'cloud-defense',name:'云安全加固',icon:'🏰',file:'secshrimp/defense/cloud-defense.md',cat:'defense',badge:'★★★'},
+  {id:'prompt-injection',name:'Prompt Injection',icon:'💉',file:'secshrimp/ai-security/prompt-injection.md',cat:'ai',badge:'★★★'},
+  {id:'agent-security',name:'Agent 安全',icon:'🤖',file:'secshrimp/ai-security/agent-security.md',cat:'ai',badge:'★★★★'},
+  {id:'mcp-security',name:'MCP 安全',icon:'🔗',file:'secshrimp/ai-security/mcp-security.md',cat:'ai',badge:'★★★★'},
+  {id:'burp',name:'Burp Suite',icon:'🔧',file:'secshrimp/tools/burp-suite.md',cat:'tools',badge:'★★★'},
+  {id:'nmap',name:'Nmap / Masscan',icon:'📡',file:'secshrimp/tools/nmap-masscan.md',cat:'tools',badge:'★★'},
+  {id:'msf',name:'Metasploit',icon:'💥',file:'secshrimp/tools/metasploit.md',cat:'tools',badge:'★★★'},
+  {id:'bloodhound',name:'BloodHound / Rubeus',icon:'🦇',file:'secshrimp/tools/bloodhound-mimikatz.md',cat:'tools',badge:'★★★★'},
+  {id:'ida',name:'IDA / Ghidra / YARA',icon:'🔬',file:'secshrimp/tools/ida-ghidra.md',cat:'tools',badge:'★★★★'},
+  {id:'cve',name:'CVE 追踪',icon:'🔍',file:'secshrimp/intel/cve-tracker.md',cat:'intel',badge:'🔥'},
+  {id:'malware',name:'恶意下载检测引擎',icon:'🦠',file:'secshrimp/projects/malware-detect-engine.md',cat:'projects',badge:'v2'},
+  {id:'roadmap',name:'学习路线图',icon:'🗺️',file:'secshrimp/career/roadmap.md',cat:'career',badge:'📈'},
+  {id:'skill',name:'能力矩阵',icon:'📊',file:'secshrimp/career/skill-matrix.md',cat:'career',badge:'📋'}
 ];
-
-const CATS = {
-  attacks:  { title:'⚔️ 攻击面 (Offense)', order:0 },
-  defense:  { title:'🛡️ 防御面 (Defense)', order:1 },
-  ai:       { title:'🤖 AI 安全', order:2 },
-  tools:    { title:'🧰 工具箱 (Toolbox)', order:3 },
-  intel:    { title:'🔬 情报追踪', order:4 },
-  projects: { title:'🚀 项目实战', order:5 },
-  career:   { title:'📈 进化路线', order:6 },
-};
-
-let totalLines = 0, totalSize = 0;
+const CATS={attacks:{title:'⚔️ 攻击面',order:0},defense:{title:'🛡️ 防御面',order:1},ai:{title:'🤖 AI 安全',order:2},tools:{title:'🧰 工具箱',order:3},intel:{title:'🔬 情报追踪',order:4},projects:{title:'🚀 项目实战',order:5},career:{title:'📈 进化路线',order:6}};
+let currentView='home';
 
 // Theme
-function toggleTheme() {
-  const html = document.documentElement;
-  const current = html.getAttribute('data-theme');
-  const next = current === 'dark' ? 'light' : 'dark';
-  html.setAttribute('data-theme', next);
-  localStorage.setItem('theme', next);
-}
-(function() {
-  const saved = localStorage.getItem('theme');
-  if (saved) document.documentElement.setAttribute('data-theme', saved);
-})();
+function toggleTheme(){const h=document.documentElement;const c=h.getAttribute('data-theme');const n=c==='dark'?'light':'dark';h.setAttribute('data-theme',n);localStorage.setItem('kb-theme',n)}
+(function(){const s=localStorage.getItem('kb-theme');if(s)document.documentElement.setAttribute('data-theme',s)})();
 
 // Nav
-function renderNav() {
-  const c = document.getElementById('nav-container');
-  const grouped = {};
-  KB.forEach(f => {
-    if (!grouped[f.cat]) grouped[f.cat] = [];
-    grouped[f.cat].push(f);
-  });
-  const sorted = Object.entries(CATS).sort((a,b) => a[1].order - b[1].order);
-  let html = '';
-  for (const [cat, meta] of sorted) {
-    const items = grouped[cat] || [];
-    if (!items.length) continue;
-    html += `<div class="nav-sec-title">${meta.title}</div>`;
-    html += items.map(f =>
-      `<a class="nav-item" href="#${f.id}" data-id="${f.id}"><span class="nav-icon">${f.icon}</span><span>${f.name}</span><span class="nav-badge">${f.badge}</span></a>`
-    ).join('');
+function renderNav(){
+  const c=document.getElementById('nav-container');
+  const g={};KB.forEach(f=>{if(!g[f.cat])g[f.cat]=[];g[f.cat].push(f)});
+  const s=Object.entries(CATS).sort((a,b)=>a[1].order-b[1].order);
+  let h=`<a class="nav-home" onclick="showHome()">🏠 首页</a>`;
+  for(const[cat,m]of s){const items=g[cat]||[];if(!items.length)continue;
+    h+=`<div class="nav-sec-title">${m.title}</div>`;
+    h+=items.map(f=>`<a class="nav-item" data-id="${f.id}" onclick="showArticle('${f.id}')"><span class="nav-icon">${f.icon}</span><span>${f.name}</span><span class="nav-badge">${f.badge}</span></a>`).join('');
   }
-  c.innerHTML = html;
-  c.querySelectorAll('.nav-item').forEach(a => {
-    a.addEventListener('click', e => {
-      e.preventDefault();
-      loadOne(a.dataset.id);
-      document.getElementById('sidebar').classList.remove('open');
-    });
-  });
+  c.innerHTML=h;
 }
 
-// Load one section
-async function loadOne(id) {
-  const file = KB.find(f => f.id === id);
-  if (!file) return;
-  const c = document.getElementById('content-container');
-  c.innerHTML = `<div class="loading">正在加载 ${file.name}</div>`;
-  try {
-    const r = await fetch(file.file);
-    if (!r.ok) throw new Error('HTTP ' + r.status);
-    const md = await r.text();
-    totalLines += md.split('\n').length;
-    totalSize += md.length;
-    c.innerHTML = `<section class="content-section" id="${file.id}">
-      <div class="section-header"><h1 class="section-title">${file.icon} ${file.name}</h1></div>
-      <div class="markdown-body">${marked.parse(md)}</div>
-    </section>`;
-    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const nav = document.querySelector(`.nav-item[data-id="${id}"]`);
-    if (nav) nav.classList.add('active');
-    updateStats();
-    window.scrollTo({top: 0, behavior: 'smooth'});
-  } catch (err) {
-    c.innerHTML = `<div class="error">⚠️ 加载失败: ${file.name} — ${err.message}<br>文件路径: ${file.file}</div>`;
+// Show home
+function showHome(){
+  currentView='home';
+  document.getElementById('topbar-title').textContent='Security Knowledge Hub';
+  document.getElementById('topbar-meta').textContent='';
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const content=document.getElementById('content');
+  content.innerHTML=`
+    <div class="hero">
+      <div class="hero-badge">🔒 SECURITY KNOWLEDGE HUB</div>
+      <h1>Security Knowledge Hub</h1>
+      <p class="hero-sub">系统化的网络安全知识体系，覆盖攻击、防御、工具与实战。</p>
+      <div class="hero-quote">"深入理解攻击，才能构建有效的防御。"</div>
+      <div class="stats">
+        <div class="stat"><div class="val">${KB.length}</div><div class="lbl">知识模块</div></div>
+        <div class="stat"><div class="val">7</div><div class="lbl">分区</div></div>
+        <div class="stat"><div class="val">5</div><div class="lbl">学习阶段</div></div>
+        <div class="stat"><div class="val">22</div><div class="lbl">专题文件</div></div>
+      </div>
+    </div>
+    <div class="content-section">
+      <div class="section-header"><h1 class="section-title">🛤️ 学习路径</h1></div>
+      <div class="path-grid">
+        <div class="path-card" onclick="showArticle('web-attacks')"><div class="path-num">Phase 1</div><div class="path-title">基础入门</div><div class="path-desc">HTTP / Web安全 / Nmap</div></div>
+        <div class="path-card" onclick="showArticle('burp')"><div class="path-num">Phase 2</div><div class="path-title">渗透实战</div><div class="path-desc">Burp / MSF / 漏洞利用</div></div>
+        <div class="path-card" onclick="showArticle('network-attacks')"><div class="path-num">Phase 3</div><div class="path-title">域渗透 & 云</div><div class="path-desc">AD / AWS / Docker</div></div>
+        <div class="path-card" onclick="showArticle('prompt-injection')"><div class="path-num">Phase 4</div><div class="path-title">AI安全 & 红队</div><div class="path-desc">Injection / Agent / MCP</div></div>
+        <div class="path-card" onclick="showArticle('ida')"><div class="path-num">Phase 5</div><div class="path-title">高级研究</div><div class="path-desc">逆向 / 漏洞挖掘 / 运营</div></div>
+      </div>
+    </div>
+    <div class="content-section">
+      <div class="section-header"><h1 class="section-title">📂 知识分类</h1></div>
+      <div class="cat-grid" id="cat-grid"></div>
+    </div>`;
+  // Render category cards
+  const catGrid=document.getElementById('cat-grid');
+  const catCounts={};KB.forEach(f=>{catCounts[f.cat]=(catCounts[f.cat]||0)+1});
+  const catDescs={attacks:'SQL注入、SSRF、域渗透、云攻击、供应链',defense:'Web防御、网络安全、端点防护、云加固',ai:'Prompt Injection、Agent安全、MCP安全',tools:'Burp、Nmap、Metasploit、BloodHound、IDA',intel:'最新高危CVE追踪与分析',projects:'恶意下载检测引擎实战',career:'学习路线图与能力矩阵'};
+  let cards='';
+  for(const[cat,m]of Object.entries(CATS).sort((a,b)=>a[1].order-b[1].order)){
+    const icon=cat==='attacks'?'⚔️':cat==='defense'?'🛡️':cat==='ai'?'🤖':cat==='tools'?'🧰':cat==='intel'?'🔬':cat==='projects'?'🚀':'📈';
+    cards+=`<div class="cat-card" onclick="showCategory('${cat}')"><div class="cat-card-icon">${icon}</div><div class="cat-card-title">${m.title}</div><div class="cat-card-desc">${catDescs[cat]||''}</div><div class="cat-card-count">${catCounts[cat]||0} 个专题</div></div>`;
   }
+  catGrid.innerHTML=cards;
 }
 
-// Load all
-async function loadAll() {
-  const c = document.getElementById('content-container');
-  totalLines = 0; totalSize = 0;
-  const grouped = {};
-  KB.forEach(f => { if (!grouped[f.cat]) grouped[f.cat] = []; grouped[f.cat].push(f); });
-  const sorted = Object.entries(CATS).sort((a,b) => a[1].order - b[1].order);
-  let html = '';
-  for (const [cat, meta] of sorted) {
-    const items = grouped[cat] || [];
-    if (!items.length) continue;
-    html += `<div class="content-section"><div class="section-header"><h1 class="section-title">${meta.title}</h1></div>`;
-    for (const file of items) {
-      try {
-        const r = await fetch(file.file);
-        if (!r.ok) throw new Error('HTTP ' + r.status);
-        const md = await r.text();
-        totalLines += md.split('\n').length;
-        totalSize += md.length;
-        html += `<section class="content-section" id="${file.id}" style="margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border)">
-          <h2 class="section-title" style="font-size:17px;margin-bottom:12px">${file.icon} ${file.name}</h2>
-          <div class="markdown-body">${marked.parse(md)}</div>
-        </section>`;
-      } catch (err) {
-        html += `<section class="content-section" id="${file.id}" style="margin-bottom:24px">
-          <h2 class="section-title" style="font-size:17px">${file.icon} ${file.name}</h2>
-          <div class="error">⚠️ 加载失败: ${err.message}</div>
-        </section>`;
-      }
+// Show category
+function showCategory(cat){
+  const items=KB.filter(f=>f.cat===cat);
+  const meta=CATS[cat];
+  currentView='category';
+  document.getElementById('topbar-title').textContent=meta.title;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  items.forEach(f=>{const n=document.querySelector(`.nav-item[data-id="${f.id}"]`);if(n)n.classList.add('active')});
+  const content=document.getElementById('content');
+  let html=`<div class="breadcrumb"><a onclick="showHome()">首页</a><span>/</span>${meta.title}</div>`;
+  html+=`<div class="content-section"><div class="section-header"><h1 class="section-title">${meta.title}</h1></div>`;
+  html+=`<div style="display:grid;gap:12px;margin-top:16px">`;
+  items.forEach(f=>{
+    html+=`<div class="cat-card" onclick="showArticle('${f.id}')" style="display:flex;align-items:center;gap:14px;padding:16px">
+      <span style="font-size:1.5rem">${f.icon}</span>
+      <div style="flex:1"><div style="font-weight:600;color:var(--fg)">${f.name}</div><div style="font-size:.75rem;color:var(--fg3);margin-top:2px">难度: ${f.badge}</div></div>
+      <span style="color:var(--accent);font-size:.8rem">→</span>
+    </div>`;
+  });
+  html+=`</div></div>`;
+  content.innerHTML=html;
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+
+// Show article
+async function showArticle(id){
+  const file=KB.find(f=>f.id===id);
+  if(!file)return;
+  currentView='article';
+  const meta=CATS[file.cat];
+  document.getElementById('topbar-title').textContent=file.name;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const nav=document.querySelector(`.nav-item[data-id="${id}"]`);
+  if(nav)nav.classList.add('active');
+  const content=document.getElementById('content');
+  content.innerHTML=`<div class="breadcrumb"><a onclick="showHome()">首页</a><span>/</span><a onclick="showCategory('${file.cat}')">${meta.title}</a><span>/</span>${file.name}</div><div class="loading">正在加载 ${file.name}</div>`;
+  try{
+    const r=await fetch(file.file);
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const md=await r.text();
+    const html=marked.parse(md);
+    // Extract TOC from headings
+    const tocMatch=html.match(/<h[23][^>]*>(.*?)<\/h[23]>/g);
+    let tocHtml='';
+    if(tocMatch&&tocMatch.length>2){
+      tocHtml=`<div style="margin-bottom:20px;padding:14px;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius)">
+        <div style="font-size:.7rem;text-transform:uppercase;letter-spacing:1px;color:var(--fg3);font-weight:700;margin-bottom:8px">📑 目录</div>`;
+      tocMatch.forEach(h=>{
+        const isH3=h.startsWith('<h3');
+        const text=h.replace(/<[^>]+>/g,'');
+        const indent=isH3?'padding-left:20px;font-size:.75rem':'font-size:.8rem';
+        tocHtml+=`<div style="${indent};padding:3px 0"><a href="#${text.replace(/[^a-zA-Z0-9\u4e00-\u9fa5]/g,'-').toLowerCase()}" style="color:var(--fg2);text-decoration:none" onmouseover="this.style.color='var(--accent)'" onmouseout="this.style.color='var(--fg2)'">${text}</a></div>`;
+      });
+      tocHtml+=`</div>`;
     }
-    html += `</div>`;
+    content.innerHTML=`<div class="breadcrumb"><a onclick="showHome()">首页</a><span>/</span><a onclick="showCategory('${file.cat}')">${meta.title}</a><span>/</span>${file.name}</div>
+      <section class="content-section"><div class="section-header"><h1 class="section-title">${file.icon} ${file.name}</h1></div>${tocHtml}<div class="markdown-body">${html}</div></section>`;
+    document.getElementById('topbar-meta').textContent=`${file.badge}`;
+    window.scrollTo({top:0,behavior:'smooth'});
+  }catch(err){
+    content.innerHTML=`<div class="breadcrumb"><a onclick="showHome()">首页</a><span>/</span>${file.name}</div><div class="error">⚠️ 加载失败: ${err.message}<br><small>路径: ${file.file}</small></div>`;
   }
-  c.innerHTML = html;
-  updateStats(); updateFooter();
-  setupScrollSpy();
 }
 
-function updateStats() {
-  const kb = (totalSize / 1024).toFixed(1);
-  document.getElementById('stats-container').innerHTML = `
-    <div class="stat"><div class="val">${KB.length}</div><div class="lbl">知识模块</div></div>
-    <div class="stat"><div class="val">${totalLines}+</div><div class="lbl">总行数</div></div>
-    <div class="stat"><div class="val">${kb}</div><div class="lbl">KB 内容</div></div>
-    <div class="stat"><div class="val">${Object.keys(CATS).length}</div><div class="lbl">分区</div></div>`;
-  document.getElementById('topbar-meta').textContent = `${KB.length} modules · ${totalLines}+ lines · ${kb} KB`;
-}
-
-function updateFooter() {
-  document.getElementById('sidebar-footer').innerHTML = `🔒 Security Researcher · ${KB.length} 模块 · ${totalLines}+ 行<br>${new Date().toISOString().split('T')[0]}`;
-}
-
-function setupScrollSpy() {
-  const sections = document.querySelectorAll('.content-section[id]');
-  const navItems = document.querySelectorAll('.nav-item');
-  const obs = new IntersectionObserver(entries => {
-    entries.forEach(e => {
-      if (e.isIntersecting) {
-        navItems.forEach(n => n.classList.remove('active'));
-        const n = document.querySelector(`.nav-item[data-id="${e.target.id}"]`);
-        if (n) { n.classList.add('active'); n.scrollIntoView({block:'nearest'}); }
+// Scroll spy
+function setupScrollSpy(){
+  const obs=new IntersectionObserver(entries=>{
+    entries.forEach(e=>{
+      if(e.isIntersecting&&currentView==='article'){
+        const id=e.target.id;
+        document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+        const n=document.querySelector(`.nav-item[data-id="${id}"]`);
+        if(n)n.classList.add('active');
       }
     });
-  }, { threshold:0.1, rootMargin:'-60px 0px -70% 0px' });
-  sections.forEach(s => obs.observe(s));
+  },{threshold:0.1,rootMargin:'-52px 0px -70% 0px'});
+  document.querySelectorAll('.content-section[id]').forEach(s=>obs.observe(s));
 }
 
 // Back to top
-window.addEventListener('scroll', () => {
-  document.getElementById('backTop').classList.toggle('show', window.scrollY > 400);
-});
+window.addEventListener('scroll',()=>{document.getElementById('backTop').classList.toggle('show',window.scrollY>300)});
 
 // Init
 renderNav();
-loadAll();
+showHome();
 </script>
 </body>
 </html>
