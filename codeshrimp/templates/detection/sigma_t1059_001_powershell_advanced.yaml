@@ -1,0 +1,718 @@
+# Sigma Rules: T1059.001 PowerShell Advanced Execution Detection
+# MITRE ATT&CK: T1059.001 - Command and Scripting Interpreter: PowerShell
+# Covers: 反射PE加载 / 反序列化 / RunSpace远程执行 / COM劫持 / 类滥用 / Add-Type原生执行 / 脚本块混淆
+# Author: 代码虾 Heartbeat #18
+# Date: 2026-05-13
+# Status: experimental
+# Logsource: process_creation (Sysmon EventID 1 / Windows Security EventID 4688)
+
+---
+
+title: PowerShell - Reflective PE Injection Detection
+id: f8a1b2c3-1059-001-001
+status: experimental
+description: |
+  Detects PowerShell commands that perform reflective PE loading — loading DLLs/EXEs
+  directly from memory without writing to disk. Common in Cobalt Strike Beacon,
+  PowerSploit Invoke-ReflectivePEInjection, and similar offensive tools.
+  Attackers use this to execute malicious payloads while evading AV/EDR file-based detection.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://github.com/cobbr/Invoke-Shellcode
+  - https://github.com/cobbr/Invoke-ReflectivePEInjection
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.defense_evasion
+  - attack.t1620
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_invoke_reflection:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Invoke-ReflectivePEInjection'
+      - 'Invoke-Shellcode'
+      - 'Invoke-WCMethod'
+      - 'Reflection.Assembly'
+      - '[System.Reflection.Assembly]::Load'
+      - 'Assembly.Load('
+
+  selection_marshal_copy:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Marshal::Copy'
+      - 'VirtualAlloc'
+      - 'VirtualProtect'
+      - 'RtlMoveMemory'
+      - 'NtCreateThreadEx'
+
+  selection_pe_header:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - '0x5A4D'          # MZ header
+      - 'MZ'              # Direct MZ reference
+      - 'PE header'
+
+  condition: selection_invoke_reflection or selection_marshal_copy or selection_pe_header
+falsepositives:
+  - Legitimate .NET assembly loading in development environments
+  - SCCM/Intune PowerShell deployments using Assembly.Load
+  - PowerShell modules that dynamically load assemblies
+level: high
+
+---
+
+title: PowerShell - Deserialization Attack Detection
+id: f8a1b2c3-1059-001-002
+status: experimental
+description: |
+  Detects PowerShell deserialization attacks using BinaryFormatter, TypeConfuser,
+  or known gadget chains (PSObject, Vector, DataSet, WindowsIdentity). Deserialization
+  vulnerabilities allow remote code execution by crafting malicious serialized objects.
+  High severity — most deserialization in PowerShell is malicious outside dev contexts.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://docs.microsoft.com/en-us/dotnet/standard/serialization/binaryformatter-security-guide
+  - https://github.com/bowserlab/Invoke-ExpressionDeserialization
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.initial_access
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_binary_formatter:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'BinaryFormatter'
+      - 'Deserialize('
+      - 'Formatterservices.Binary'
+
+  selection_gadget_chains:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'TypeConfuser'
+      - 'PSObject'
+      - 'WindowsIdentity'
+      - 'DataSet'
+      - 'Vector`1'
+      - 'Func`2'
+
+  selection_pseudo_console:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Invoke-Expression'
+      - 'IEX'
+      - 'Invoke-Command'
+      - 'ICM'
+    CommandLine|contains:
+      - 'FromBase64String'
+      - '-join'
+
+  condition: selection_binary_formatter or selection_gadget_chains or (selection_pseudo_console and selection_gadget_chains)
+falsepositives:
+  - Application deserialization in .NET development
+  - Legacy application migration with BinaryFormatter
+level: critical
+
+---
+
+title: PowerShell - RunSpace Remote Execution Detection
+id: f8a1b2c3-1059-001-003
+status: experimental
+description: |
+  Detects PowerShell RunSpace usage for out-of-process execution. Attackers use
+  RunSpaces to create independent PowerShell runspaces that bypass ScriptBlock logging,
+  AMSI, and other in-process defenses. Common in Empire, Cobalt Strike, and custom C2 frameworks.
+  RunSpace execution from C# or Python is especially suspicious.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://docs.microsoft.com/en-us/dotnet/api/system.management.automation.runspaces
+  - https://github.com/BC-SECURITY/Empire
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.defense_evasion
+  - attack.t1055
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_runspace_create:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'RunspaceFactory.CreateRunspace'
+      - 'InitialSessionState'
+      - 'RunspacePool'
+      - 'CreatePipeline()'
+
+  selection_runspace_invoke:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'InvokeAsync('
+      - 'BeginInvoke('
+      - '$runspace.Invoke('
+      - 'Pipeline.Invoke('
+
+  selection_out_of_proc:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'powershell -noe'
+      - 'powershell -noni'
+      - 'powershell -nop'
+      - 'powershell -w hidden'
+      - 'pwsh -noe'
+      - 'pwsh -noni'
+
+  condition: selection_runspace_create or selection_runspace_invoke or selection_out_of_proc
+falsepositives:
+  - Exchange Server RunSpace usage for mailbox management
+  - Azure Automation runbooks
+  - DSC (Desired State Configuration) push operations
+level: high
+
+---
+
+title: PowerShell - COM Object Hijacking Detection
+id: f8a1b2c3-1059-001-004
+status: experimental
+description: |
+  Detects PowerShell COM object creation with suspicious ProgIDs commonly abused
+  for code execution. WScript.Shell, Shell.Application, and Scripting.FileSystemObject
+  are legitimate COM objects frequently abused by attackers for process execution,
+  file operations, and registry manipulation.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://attack.mitre.org/techniques/T1218/
+  - https://docs.microsoft.com/en-us/windows/win32/com/com-programming-overview
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.defense_evasion
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_com_execution:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'New-Object -COM'
+      - 'New-Object -ComObject'
+      - 'New-Object COM.'
+      - '[activator]::CreateInstance'
+    CommandLine|contains:
+      - 'WScript.Shell'
+      - 'Shell.Application'
+      - 'Scripting.FileSystemObject'
+      - 'WbemScripting.SWbemLocator'
+      - 'Schedule.Service'
+      - 'XMLDOM'
+
+  selection_com_run:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - '.Run('
+      - '.ShellExecute('
+      - '.Exec('
+      - '.Invoke()'
+    CommandLine|contains:
+      - 'New-Object -COM'
+      - 'New-Object -ComObject'
+
+  selection_suspicious_com:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'MSScriptControl.ScriptControl'
+      - 'SQLDMO.SQLServer'
+      - 'Scripting.Signer'
+      - 'MMC20.Application'
+
+  condition: selection_com_execution or selection_com_run or selection_suspicious_com
+falsepositives:
+  - SCCM/ConfigMgr COM automation
+  - Exchange management scripts using COM
+  - Legacy application deployment scripts
+level: medium
+
+---
+
+title: PowerShell - Add-Type Native Code Execution Detection
+id: f8a1b2c3-1059-001-005
+status: experimental
+description: |
+  Detects PowerShell Add-Type usage for compiling and executing C#/VB.NET code
+  inline. Attackers use Add-Type to call Win32 APIs directly, bypass PowerShell
+  language restrictions, and execute shellcode. Add-Type with DllImport or
+  unsafe code blocks is especially suspicious.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://docs.microsoft.com/en-us/powershell/module/microsoft.powershell.utility/add-type
+  - https://github.com/mgeeky/Shellcode/blob/master/Invoke-Shellcode.ps1
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.defense_evasion
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_addtype_winapi:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Add-Type'
+    CommandLine|contains:
+      - 'DllImport'
+      - 'kernel32'
+      - 'ntdll'
+      - 'VirtualAlloc'
+      - 'VirtualProtect'
+      - 'CreateThread'
+      - 'RtlMoveMemory'
+      - 'NtCreateThreadEx'
+
+  selection_addtype_unsafe:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Add-Type'
+    CommandLine|contains:
+      - 'unsafe'
+      - 'AllowUnsafeBlocks'
+      - 'fixed ('
+      - 'Marshal.Copy'
+
+  selection_addtype_shellcode:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Add-Type'
+    CommandLine|contains:
+      - '0xfc'
+      - '0xe8'
+      - '0x48'             # Common shellcode opcodes
+      - '$bytes = @('
+      - '[byte[]]'
+
+  condition: selection_addtype_winapi or selection_addtype_unsafe or selection_addtype_shellcode
+falsepositives:
+  - Legitimate C# compilation in PowerShell scripts
+  - Custom module development using Add-Type
+  - P/Invoke calls for system information queries
+level: high
+
+---
+
+title: PowerShell - Script Block Obfuscation Detection
+id: f8a1b2c3-1059-001-006
+status: experimental
+description: |
+  Detects PowerShell script block obfuscation techniques used to evade AMSI and
+  ScriptBlock logging. Includes tick mark insertion, string substitution (REPLACE),
+  XOR encoding, base64 in string context, and format string abuse.
+references:
+  - https://attack.mitre.org/techniques/T1027/010/
+  - https://github.com/danielbohannon/Invoke-Obfuscation
+  - https://github.com/danielbohannon/ISESteroids
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.defense_evasion
+  - attack.t1027.010
+  - attack.execution
+  - attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_tick_obfuscation:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|re: '`[a-zA-Z]`[a-zA-Z]'  # Tick marks between characters
+
+  selection_replace_obfuscation:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - '-replace'
+    CommandLine|contains:
+      - "'"
+      - '"'
+    # Pattern: string with many -replace operations chained
+    CommandLine|re: "('.*'-replace.*'.*'-replace.*'.*'-replace)"
+
+  selection_xor_obfuscation:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - '-bxor'
+      - '-band'
+      - '-bshl'
+    CommandLine|contains:
+      - '[char]'
+      - '-join'
+
+  selection_format_string:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - '-f '
+      - '-format'
+    CommandLine|contains:
+      - '{0}'
+      - '{1}'
+      - '{2}'
+    # Multiple format string substitutions indicate obfuscation
+    CommandLine|re: '\{[0-9]\}.*\{[0-9]\}.*\{[0-9]\}'
+
+  selection_concat_obfuscation:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - '-join'
+      - '[char]'
+    CommandLine|contains:
+      - '('
+      - ')'
+    # Pattern: join of many char values
+    CommandLine|re: '\-join\s*\(.*\[char\]'
+
+  condition: selection_tick_obfuscation or selection_replace_obfuscation or selection_xor_obfuscation or selection_format_string or selection_concat_obfuscation
+falsepositives:
+  - Legitimate string manipulation in scripts
+  - Internationalization scripts using format strings
+  - Developer testing of obfuscation detection
+level: medium
+
+---
+
+title: PowerShell - Suspicious Child Process from Office Applications
+id: f8a1b2c3-1059-001-007
+status: experimental
+description: |
+  Detects PowerShell spawned by Office applications (Word, Excel, PowerPoint, Outlook).
+  Office macros launching PowerShell is a primary initial access vector. Even with
+  Microsoft's macro blocking, users may bypass via signed macros or social engineering.
+references:
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://attack.mitre.org/techniques/T1204/002/
+  - https://www.microsoft.com/en-us/security/blog/2022/01/04/deep-dive-into-the-second-stage-intrusion-activity-from-unc2977/
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.initial_access
+  - attack.t1204.002
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_office_ps_spawn:
+    ParentImage|endswith:
+      - '\winword.exe'
+      - '\excel.exe'
+      - '\powerpnt.exe'
+      - '\msaccess.exe'
+      - '\mspub.exe'
+      - '\visio.exe'
+      - '\outlook.exe'
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+
+  selection_office_script_spawn:
+    ParentImage|endswith:
+      - '\winword.exe'
+      - '\excel.exe'
+      - '\powerpnt.exe'
+    Image|endswith:
+      - '\cmd.exe'
+    CommandLine|contains:
+      - 'powershell'
+      - 'pwsh'
+
+  selection_office_wscript_spawn:
+    ParentImage|endswith:
+      - '\winword.exe'
+      - '\excel.exe'
+      - '\powerpnt.exe'
+    Image|endswith:
+      - '\wscript.exe'
+      - '\cscript.exe'
+    CommandLine|contains:
+      - 'powershell'
+      - 'pwsh'
+
+  condition: selection_office_ps_spawn or selection_office_script_spawn or selection_office_wscript_spawn
+falsepositives:
+  - Office add-ins that legitimately invoke PowerShell (rare)
+  - DLP/Compliance tools with Office integration
+level: high
+
+---
+
+title: PowerShell - AMSI Bypass Attempt Detection
+id: f8a1b2c3-1059-001-008
+status: experimental
+description: |
+  Detects attempts to bypass Windows Antimalware Scan Interface (AMSI). AMSI provides
+  deep content inspection for PowerShell scripts. Attackers bypass it by patching
+  amsiInitFailed, using reflection to modify AMSI internals, or loading from non-scanned
+  paths. These techniques are almost exclusively malicious.
+references:
+  - https://attack.mitre.org/techniques/T1562/001/
+  - https://amsi.fail/
+  - https://github.com/rasta-mouse/AmsiScanner
+  - https://github.com/S3cur3tySh3ll/AMSI_Bypass_Powershell
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.defense_evasion
+  - attack.t1562.001
+  - attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_amsi_patch:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'amsiInitFailed'
+      - 'AmsiOpenSession'
+      - 'AmsiScanBuffer'
+      - 'AmsiUtils'
+      - 'amsi.dll'
+
+  selection_amsi_reflection:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - '[System.Reflection.Assembly]'
+    CommandLine|contains:
+      - 'AMSI'
+      - 'amsi'
+
+  selection_amsi_context_mod:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'SetAmsiContext'
+      - 'AmsiContext'
+      - 'AmsiSession'
+
+  selection_amsi_disable_policy:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'DisableRealtimeMonitoring'
+      - 'Set-MpPreference'
+      - 'Add-MpPreference'
+    CommandLine|contains:
+      - '-Disable'
+      - 'ExclusionPath'
+      - 'ExclusionProcess'
+
+  condition: selection_amsi_patch or selection_amsi_reflection or selection_amsi_context_mod or selection_amsi_disable_policy
+falsepositives:
+  - Security researchers testing AMSI bypass techniques
+  - Red team engagements (with proper authorization)
+level: critical
+
+---
+
+title: PowerShell - Suspicious Download and Execution Pattern
+id: f8a1b2c3-1059-001-009
+status: experimental
+description: |
+  Detects advanced PowerShell download cradle patterns beyond basic Invoke-WebRequest.
+  Covers WebClient stream-based downloads, certificate bypass downloads, and
+  OneDrive/SharePoint abuse for payload delivery.
+references:
+  - https://attack.mitre.org/techniques/T1105/
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://www.fireeye.com/content/dam/fireeye-www/global/en/current-threats/pdfs/wp-windows-management-instrumentation.pdf
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.execution
+  - attack.t1059.001
+  - attack.command_and_control
+  - attack.t1105
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_webclient_stream:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Net.WebClient'
+      - 'WebClient'
+    CommandLine|contains:
+      - '.DownloadData('
+      - '.DownloadString('
+      - '.OpenRead('
+      - '.GetResponseStream('
+
+  selection_invoke_restmethod:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'Invoke-RestMethod'
+      - 'irm'
+    CommandLine|contains:
+      - '| iex'
+      - '| Invoke-Expression'
+      - '| iex)'
+      - '-UseBasicParsing'
+
+  selection_cert_bypass:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - '[System.Net.ServicePointManager]::SecurityProtocol'
+      - 'ServerCertificateValidationCallback'
+      - 'NET::ServerCertificateValidationCallback'
+      - 'IgnoreCertificate'
+
+  selection_cloud_share_download:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'onedrive.live.com'
+      - 'sharepoint.com'
+      - 'docs.google.com'
+      - 'raw.githubusercontent.com'
+      - 'paste.ee'
+      - 'hastebin.com'
+      - 'pastebin.com'
+
+  condition: selection_webclient_stream or selection_invoke_restmethod or selection_cert_bypass or selection_cloud_share_download
+falsepositives:
+  - Azure/AWS CLI operations from PowerShell
+  - Software update scripts downloading from cloud storage
+  - Developer scripts fetching from GitHub
+level: high
+
+---
+
+title: PowerShell - Suspicious Process Injection via PowerShell
+id: f8a1b2c3-1059-001-010
+status: experimental
+description: |
+  Detects PowerShell performing process injection techniques including process
+  hollowing, thread execution, and APC injection. These techniques are used by
+  Cobalt Strike, Empire, and modern RAT frameworks to execute code in legitimate
+  process contexts.
+references:
+  - https://attack.mitre.org/techniques/T1055/
+  - https://attack.mitre.org/techniques/T1059/001/
+  - https://github.com/mgeeky/Process-Hollowing
+author: Heartbeat-AutoGen
+date: 2026-05-13
+tags:
+  - attack.defense_evasion
+  - attack.t1055
+  - attack.execution
+  - attack.t1059.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_injection_api:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'WriteProcessMemory'
+      - 'NtWriteVirtualMemory'
+      - 'CreateRemoteThread'
+      - 'NtCreateThreadEx'
+      - 'QueueUserAPC'
+      - 'NtQueueApcThread'
+      - 'RtlCreateUserThread'
+
+  selection_process_hollow:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'NtUnmapViewOfSection'
+      - 'ZwUnmapViewOfSection'
+      - 'GetThreadContext'
+      - 'SetThreadContext'
+      - 'ResumeThread'
+    CommandLine|contains:
+      - 'CREATE_SUSPENDED'
+
+  selection_early_hook:
+    Image|endswith:
+      - '\powershell.exe'
+      - '\pwsh.exe'
+    CommandLine|contains:
+      - 'SetWindowsHookEx'
+      - 'NtSetInformationThread'
+      - 'NtAlertResumeThread'
+      - 'NtMapViewOfSection'
+
+  condition: selection_injection_api or selection_process_hollow or selection_early_hook
+falsepositives:
+  - Anti-malware tools performing legitimate injection
+  - Application compatibility shims
+  - Security research tools
+level: critical

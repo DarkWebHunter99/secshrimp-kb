@@ -1,0 +1,69 @@
+# Suricata Rules — T1059.001 PowerShell Encoded Command (Network Detection)
+# Detects HTTP-based PowerShell download cradles and Base64 payload exfil/C2
+# Maps to MITRE ATT&CK T1059.001 / T1105 (Ingress Tool Transfer)
+# Author: CodeShrimp Detection Engineering
+# Date:   2026-05-14
+
+# ---------------------------------------------------------------------------
+# Rule 1: PowerShell download cradle in HTTP request body or URI
+# Adversaries commonly use Invoke-WebRequest / Net.WebClient to download payloads.
+# The Base64 pattern matches "IEX(New-Object Net.WebClient).DownloadString(" encoded.
+# ---------------------------------------------------------------------------
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"T1059.001 PowerShell Base64 Download Cradle Detected";
+    flow:established,to_server;
+    content:"POST"; http_method;
+    pcre:"/(?:cABvAHcAZQByAHMAaABlAGwAbAA|SQBFAFgA|AEkAZQBYACgATgBlAHQALgBXAGUAYgBDAGwAaQBlAG4AdAA|SW52b2tlLUV4cHJlc3Npb24|SW52b2tlLVdlYlJlcXVlc3Q)/Pi";
+    classtype:trojan-activity;
+    sid:2026001001;
+    rev:1;
+    metadata:attack_t1059_001, severity high, created_at 2026-05-14;
+)
+
+# ---------------------------------------------------------------------------
+# Rule 2: PowerShell encoded command in User-Agent (data exfil / C2 beacon)
+# Some malware exfiltrates data or beacons via Base64-encoded User-Agent strings.
+# ---------------------------------------------------------------------------
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"T1059.001 PowerShell Encoded Data in User-Agent";
+    flow:established,to_server;
+    content:"User-Agent|3a 20|"; http_header;
+    pcre:"/User-Agent\s*:\s*[A-Za-z0-9+\/]{50,}={0,2}/i";
+    flowbits:set,t1059_001.ua.suspect;
+    classtype:trojan-activity;
+    sid:2026001002;
+    rev:1;
+    metadata:attack_t1059_001, severity medium, created_at 2026-05-14;
+)
+
+# ---------------------------------------------------------------------------
+# Rule 3: PowerShell reverse shell over HTTP (large Base64 in POST body)
+# Common pattern: POST with chunked encoding containing PowerShell reverse shell.
+# ---------------------------------------------------------------------------
+alert http $HOME_NET any -> $EXTERNAL_NET any (
+    msg:"T1059.001 PowerShell Reverse Shell Indicators in HTTP Traffic";
+    flow:established,to_server;
+    content:"POST"; http_method;
+    content:"Content-Type|3a 20|application/x-www-form-urlencoded"; http_header;
+    dsize:>500;
+    pcre:"/(?:cABvAHcAZQByAHMAaABlAGwAbAA|UABvAHcAZQByAHMAaABlAGwAbAA|UE8AVwBFAFIAUwBIAEUATABM)/i";
+    classtype:trojan-activity;
+    sid:2026001003;
+    rev:1;
+    metadata:attack_t1059_001, severity high, created_at 2026-05-14;
+)
+
+# ---------------------------------------------------------------------------
+# Rule 4: Base64-encoded PowerShell command in DNS queries (DNS tunneling)
+# Adversaries sometimes tunnel PowerShell payloads via DNS TXT records.
+# ---------------------------------------------------------------------------
+alert dns $HOME_NET any -> any any (
+    msg:"T1059.001 PowerShell Payload in DNS Query";
+    flow:established;
+    dns.query;
+    pcre:"/^[a-zA-Z0-9+\/]{20,}={0,2}\./";
+    classtype:trojan-activity;
+    sid:2026001004;
+    rev:1;
+    metadata:attack_t1059_001, severity medium, created_at 2026-05-14;
+)

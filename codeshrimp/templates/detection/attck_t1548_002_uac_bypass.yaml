@@ -1,0 +1,475 @@
+title: T1548.002 - Bypass User Account Control (UAC Bypass Detection)
+id: f8a1b2c3-1548-002-001
+status: experimental
+description: |
+  Detects multiple UAC bypass techniques targeting Windows User Account Control.
+  Covers 8 common bypass methods: Event Viewer hijack, Fodhelper/ComputerDefaults
+  ms-settings hijack, SDCLT bypass, SilentCleanup abuse, CMSTPLUA COM interface,
+  .NET Assembly loading from non-standard paths, and DLL hijacking via auto-elevating executables.
+  MITRE ATT&CK: T1548.002 - Abuse Elevation Control Mechanism: Bypass User Account Control
+references:
+  - https://attack.mitre.org/techniques/T1548/002/
+  - https://github.com/hfiref0x/UACME
+  - https://pentestlab.blog/2017/03/20/uac-bypass-fodhelper/
+  - https://enigma0x3.net/2017/01/05/uac-bypass-using-eventvwr-exe-and-registry-hijacking/
+author: 代码虾
+date: 2026-05-14
+tags:
+  - attack.defense_evasion
+  - attack.privilege_escalation
+  - attack.t1548.002
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  # === Technique 1: Event Viewer Registry Hijack (eventvwr.exe) ===
+  # Attackers set HKCU\Software\Classes\mscfile\shell\open\command to launch payload
+  selection_eventvwr:
+    Image|endswith: '\eventvwr.exe'
+    ParentImage|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+  condition_eventvwr: selection_eventvwr
+
+  # === Technique 2: Fodhelper.exe ms-settings Hijack ===
+  # Attackers set HKCU\Software\Classes\ms-settings\shell\open\command to auto-elevate
+  selection_fodhelper:
+    Image|endswith: '\fodhelper.exe'
+    ParentImage|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+  condition_fodhelper: selection_fodhelper
+
+  # === Technique 3: ComputerDefaults.exe ms-settings Hijack ===
+  selection_computerdefaults:
+    Image|endswith: '\computerdefaults.exe'
+    ParentImage|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+  condition_computerdefaults: selection_computerdefaults
+
+  # === Technique 4: SDCLT.exe Bypass ===
+  # Attackers modify HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe
+  selection_sdclt:
+    Image|endswith: '\sdclt.exe'
+    ParentImage|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+  condition_sdclt: selection_sdclt
+
+  # === Technique 5: SilentCleanup Scheduled Task Abuse ===
+  # Windows scheduled task that auto-elevates; attacker runs payload via %windir%\System32\cleanmgr.exe
+  selection_silentcleanup_parent:
+    Image|endswith:
+      - '\cleanmgr.exe'
+      - '\schtasks.exe'
+    CommandLine|contains:
+      - 'SilentCleanup'
+      - '/TN'
+      - '\Microsoft\Windows\Maintenance\WinSAT'
+  selection_silentcleanup_cmd:
+    Image|endswith: '\cleanmgr.exe'
+    ParentImage|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+  condition_silentcleanup: selection_silentcleanup_parent or selection_silentcleanup_cmd
+
+  # === Technique 6: CMSTPLUA COM Interface ===
+  # CMSTPLUA.UAC COM interface auto-elevates; invoked via rundll32 or mshta
+  selection_cmstplua_cmd:
+    Image|endswith:
+      - '\rundll32.exe'
+      - '\mshta.exe'
+    CommandLine|contains:
+      - 'CMSTPLUA'
+      - '{3E5FC7F9-9A51-4367-9063-A120244FB27B}'
+  selection_cmstplua_com:
+    Image|endswith:
+      - '\rundll32.exe'
+      - '\mshta.exe'
+    CommandLine|re: '(?i)CMSTP|cmstp\.dll'
+  condition_cmstplua: selection_cmstplua_cmd or selection_cmstplua_com
+
+  # === Technique 7: .NET Assembly Loading for UAC Bypass ===
+  # Attackers load .NET assemblies via Add-Type or Assembly.Load to bypass UAC
+  selection_net_asm:
+    Image|endswith:
+      - '\rundll32.exe'
+      - '\regsvr32.exe'
+    CommandLine|contains:
+      - 'Assembly.Load'
+      - 'System.Management.Automation'
+      - 'System.Diagnostics.Process'
+      - 'Microsoft.VisualBasic.Interaction'
+  condition_net_asm: selection_net_asm
+
+  # === Technique 8: DLL Hijacking via Auto-Elevating EXEs ===
+  # Attackers place malicious DLLs alongside auto-elevating executables
+  # Examples: dllhijack via explorer.exe, consent.exe, or other auto-elevating processes
+  selection_dll_hijack:
+    Image|endswith:
+      - '\explorer.exe'
+      - '\consent.exe'
+    CommandLine|contains:
+      - '/s'   # Silent elevation flag
+      - '--system'
+  selection_dll_hijack_child:
+    ParentImage|endswith:
+      - '\explorer.exe'
+      - '\consent.exe'
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+  condition_dll_hijack: selection_dll_hijack or selection_dll_hijack_child
+
+  # === Technique 9: Registry Keys Used for UAC Bypass ===
+  # Detects direct modification of registry keys commonly abused for UAC bypass
+  # Requires sysmon event_id=12 or Windows event_id=4657
+  selection_registry_keys:
+    TargetObject|contains:
+      - '\Software\Classes\ms-settings\shell\open\command'
+      - '\Software\Classes\mscfile\shell\open\command'
+      - '\Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe'
+      - '\Software\Classes\batfile\shell\open\command'
+      - '\Software\Classes\cmdfile\shell\open\command'
+      - '\Software\Classes\exefile\shell\open\command'
+  condition_registry_keys: selection_registry_keys
+
+  # === Combined Condition ===
+  condition: >
+    condition_eventvwr or
+    condition_fodhelper or
+    condition_computerdefaults or
+    condition_sdclt or
+    condition_silentcleanup or
+    condition_cmstplua or
+    condition_net_asm or
+    condition_dll_hijack or
+    condition_registry_keys
+
+falsepositives:
+  - Legitimate administrative workflows using eventvwr.exe from script
+  - System Center or other management tools invoking fodhelper.exe
+  - IT staff running computerdefaults.exe for configuration
+  - Scheduled task management invoking SilentCleanup legitimately
+  - Software installation using CMSTPLUA COM interface
+level: high
+
+---
+
+title: T1548.002 - UAC Bypass via Registry Modification (Sysmon)
+id: f8a1b2c3-1548-002-002
+status: experimental
+description: |
+  Detects registry modifications to keys commonly abused for UAC bypass using Sysmon.
+  Monitors HKCU and HKLM registry paths that attackers hijack to auto-elevate processes.
+  MITRE ATT&CK: T1548.002
+references:
+  - https://attack.mitre.org/techniques/T1548/002/
+  - https://docs.microsoft.com/en-us/windows/win32/sysmon/event-12-registry-event-object-create-deleted
+author: 代码虾
+date: 2026-05-14
+tags:
+  - attack.defense_evasion
+  - attack.privilege_escalation
+  - attack.t1548.002
+logsource:
+  product: windows
+  category: registry_set
+detection:
+  selection_ms_settings:
+    TargetObject|endswith: '\ms-settings\shell\open\command'
+  selection_mscfile:
+    TargetObject|endswith: '\mscfile\shell\open\command'
+  selection_control_exe:
+    TargetObject|contains: '\App Paths\control.exe'
+  selection_batfile:
+    TargetObject|endswith: '\batfile\shell\open\command'
+  selection_cmdfile:
+    TargetObject|endswith: '\cmdfile\shell\open\command'
+  selection_exefile:
+    TargetObject|endswith: '\exefile\shell\open\command'
+  selection_classid:
+    TargetObject|contains:
+      - '\CLSID\{DFB65200-ADB5-11d0-99EF-00C04FC99CC6}\LocalServer32'
+      - '\CLSID\{0A29FF9E-7F9C-4437-8B11-F424491E3933}\InprocServer32'
+      - '\CLSID\{0A29FF9E-7F9C-4437-8B11-F424491E3931}\InprocServer32'
+  condition: >
+    selection_ms_settings or
+    selection_mscfile or
+    selection_control_exe or
+    selection_batfile or
+    selection_cmdfile or
+    selection_exefile or
+    selection_classid
+falsepositives:
+  - Software installation modifying shell associations
+  - IT automation tools setting default program handlers
+level: high
+
+---
+
+title: T1548.002 - UAC Bypass via CMSTP Execution
+id: f8a1b2c3-1548-002-003
+status: experimental
+description: |
+  Detects abuse of CMSTP (Connection Manager Profile Installer) for UAC bypass.
+  Attackers craft malicious .inf files that execute commands via CMSTP.exe auto-elevation.
+  MITRE ATT&CK: T1548.002
+references:
+  - https://attack.mitre.org/techniques/T1548/002/
+  - https://pentestlab.blog/2017/05/23/uac-bypass-cmstp/
+  - https://github.com/nicene-nern/CMSTP-UAC-Bypass
+author: 代码虾
+date: 2026-05-14
+tags:
+  - attack.defense_evasion
+  - attack.privilege_escalation
+  - attack.t1548.002
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_cmstp:
+    Image|endswith: '\cmstp.exe'
+  selection_cmstp_inf:
+    Image|endswith: '\cmstp.exe'
+    CommandLine|contains:
+      - '/s'
+      - '/ni'
+  selection_cmstp_child:
+    ParentImage|endswith: '\cmstp.exe'
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\mshta.exe'
+  condition: selection_cmstp or selection_cmstp_inf or selection_cmstp_child
+falsepositives:
+  - Legitimate VPN or Connection Manager profile installation
+level: high
+
+---
+
+title: T1548.002 - UAC Bypass via .NET ClickOnce Deployment
+id: f8a1b2c3-1548-002-004
+status: experimental
+description: |
+  Detects abuse of .NET ClickOnce deployment for UAC bypass.
+  Attackers use dfsvc.exe (ClickOnce) to bypass UAC by deploying malicious applications.
+  MITRE ATT&CK: T1548.002
+references:
+  - https://attack.mitre.org/techniques/T1548/002/
+  - https://posts.specterops.io/clickonce-for-everything-489fd1c45749
+author: 代码虾
+date: 2026-05-14
+tags:
+  - attack.defense_evasion
+  - attack.privilege_escalation
+  - attack.t1548.002
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_dfsvc:
+    Image|endswith: '\dfsvc.exe'
+    CommandLine|contains:
+      - '/dll'
+      - '/noupdate'
+      - '.application'
+      - '.xbap'
+  selection_dfsvc_child:
+    ParentImage|endswith: '\dfsvc.exe'
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+  condition: selection_dfsvc or selection_dfsvc_child
+falsepositives:
+  - Legitimate .NET ClickOnce application deployment
+level: medium
+
+---
+
+title: T1548.002 - UAC Bypass via fodhelper.exe with Suspicious Child
+id: f8a1b2c3-1548-002-005
+status: experimental
+description: |
+  Advanced detection of fodhelper.exe UAC bypass when spawning suspicious child processes.
+  fodhelper.exe is a Windows binary that auto-elevates and checks ms-settings registry
+  on launch. If an attacker sets the registry key, fodhelper.exe will execute the
+  attacker's payload at high integrity without UAC prompt.
+  MITRE ATT&CK: T1548.002
+references:
+  - https://attack.mitre.org/techniques/T1548/002/
+  - https://enigma0x3.net/2017/01/05/uac-bypass-using-fodhelper-exe/
+author: 代码虾
+date: 2026-05-14
+tags:
+  - attack.defense_evasion
+  - attack.privilege_escalation
+  - attack.t1548.002
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_fodhelper_high_integrity:
+    Image|endswith: '\fodhelper.exe'
+    IntegrityLevel: 'High'
+  selection_fodhelper_nonstandard_parent:
+    Image|endswith: '\fodhelper.exe'
+    ParentImage|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\rundll32.exe'
+      - '\regsvr32.exe'
+      - '\explorer.exe'
+  selection_fodhelper_child_cmd:
+    ParentImage|endswith: '\fodhelper.exe'
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+  condition: >
+    selection_fodhelper_high_integrity or
+    selection_fodhelper_nonstandard_parent or
+    selection_fodhelper_child_cmd
+falsepositives:
+  - Rare cases where fodhelper.exe is legitimately launched from scripts
+level: high
+
+---
+
+title: T1548.002 - UAC Bypass via eventvwr.exe with Suspicious Child
+id: f8a1b2c3-1548-002-006
+status: experimental
+description: |
+  Advanced detection of eventvwr.exe UAC bypass. When eventvwr.exe launches from
+  a non-standard parent and spawns cmd.exe/powershell.exe at high integrity,
+  it indicates registry hijacking of mscfile\shell\open\command.
+  MITRE ATT&CK: T1548.002
+references:
+  - https://attack.mitre.org/techniques/T1548/002/
+  - https://enigma0x3.net/2017/01/05/uac-bypass-using-eventvwr-exe-and-registry-hijacking/
+author: 代码虾
+date: 2026-05-14
+tags:
+  - attack.defense_evasion
+  - attack.privilege_escalation
+  - attack.t1548.002
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_eventvwr_high_integrity:
+    Image|endswith: '\eventvwr.exe'
+    IntegrityLevel: 'High'
+  selection_eventvwr_nonstandard_parent:
+    Image|endswith: '\eventvwr.exe'
+    ParentImage|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\rundll32.exe'
+      - '\regsvr32.exe'
+      - '\explorer.exe'
+  selection_eventvwr_child_cmd:
+    ParentImage|endswith: '\eventvwr.exe'
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+  condition: >
+    selection_eventvwr_high_integrity or
+    selection_eventvwr_nonstandard_parent or
+    selection_eventvwr_child_cmd
+falsepositives:
+  - Legitimate eventvwr.exe usage from administrative tools
+  - Group Policy management launching eventvwr.exe from scripts
+level: high
+
+---
+
+title: T1548.002 - UAC Bypass via sdclt.exe Registry Hijack
+id: f8a1b2c3-1548-002-007
+status: experimental
+description: |
+  Detects sdclt.exe UAC bypass via registry hijack. Attackers modify
+  HKCU\Software\Microsoft\Windows\CurrentVersion\App Paths\control.exe
+  to redirect control.exe to their payload, auto-elevated by sdclt.exe.
+  MITRE ATT&CK: T1548.002
+references:
+  - https://attack.mitre.org/techniques/T1548/002/
+  - https://pentestlab.blog/2017/03/27/uac-bypass-sdclt/
+author: 代码虾
+date: 2026-05-14
+tags:
+  - attack.defense_evasion
+  - attack.privilege_escalation
+  - attack.t1548.002
+logsource:
+  product: windows
+  category: process_creation
+detection:
+  selection_sdclt:
+    Image|endswith: '\sdclt.exe'
+    ParentImage|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+      - '\cscript.exe'
+      - '\rundll32.exe'
+      - '\regsvr32.exe'
+  selection_sdclt_child:
+    ParentImage|endswith: '\sdclt.exe'
+    Image|endswith:
+      - '\cmd.exe'
+      - '\powershell.exe'
+      - '\pwsh.exe'
+      - '\mshta.exe'
+      - '\wscript.exe'
+  condition: selection_sdclt or selection_sdclt_child
+falsepositives:
+  - Rare legitimate sdclt.exe usage from administrative scripts
+level: high

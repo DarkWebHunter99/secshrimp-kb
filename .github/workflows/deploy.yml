@@ -1,4 +1,4 @@
-name: Deploy Knowledge Base
+name: Deploy Knowledge Hub
 
 on:
   push:
@@ -22,11 +22,11 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Setup Pages
-        uses: actions/configure-pages@v4
+        uses: actions/configure-pages@v5
 
       - name: Build
         run: |
-          echo "Building knowledge base site..."
+          echo "Building knowledge hub..."
           echo "Files:"
           ls -la secshrimp/ codeshrimp/ shared/ 2>/dev/null || true
 

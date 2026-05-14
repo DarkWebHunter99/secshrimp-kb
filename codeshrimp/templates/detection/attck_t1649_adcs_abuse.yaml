@@ -1,0 +1,741 @@
+# =============================================================================
+# MITRE ATT&CK T1649 — AD CS (Active Directory Certificate Services) Abuse
+# =============================================================================
+# AD CS 是 Windows PKI 基础设施的核心组件。攻击者滥用 AD CS 可实现：
+#   - 证书模板提权（ESC1-ESC8）
+#   - 恶意证书请求（影子凭据）
+#   - 证书服务持久化
+#   - 证书滥用横向移动
+#
+# 本文件包含 12 条 Sigma 检测规则，覆盖：
+#   - 证书模板枚举与修改
+#   - 恶意证书请求
+#   - 证书服务配置篡改
+#   - 证书滥用横向移动
+#   - ADCS 持久化
+#
+# MITRE ATT&CK: T1649 — Steal or Forge Authentication Certificates
+# 子技术: T1649.001 (Certificate Template Modification)
+#         T1649.002 (Certificate Enrollment)
+#         T1649.003 (Certificate Abuse)
+#
+# 适用平台: Windows (Active Directory)
+# 日志源: Security, Directory Service, ADCS Admin, Certificate Services
+# 推荐 SIEM: Splunk / Elastic / Microsoft Sentinel / QRadar
+#
+# SID 范围: t1649-001 ~ t1649-012
+# 版本: 1.0
+# 作者: 代码虾 (CodeShrimp)
+# 创建日期: 2026-05-14
+# =============================================================================
+
+---
+title: AD CS — 证书模板枚举 (Certify/Certipy)
+id: t1649-001
+status: experimental
+description: |
+  检测 Certify 或 Certipy 工具的证书模板枚举行为。
+  攻击者使用这些工具枚举 AD CS 配置，寻找可利用的证书模板（如 ESC1）。
+  Certify 是 C# 编写的 .NET 工具，Certipy 是 Python 重写版。
+
+  典型命令行:
+    certify.exe enumerate
+    certipy.exe find -u user@domain.com -p password
+    certify.exe cas
+references:
+  - https://posts.specterops.io/certified-pre-owned-d95910965cd2
+  - https://github.com/GhostPack/Certify
+  - https://github.com/ly4k/Certipy
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.t1649
+  - attack.t1649.001
+  - attack.t1649.002
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_certify:
+    - Image|endswith:
+        - '\certify.exe'
+        - '\Certify.exe'
+    - CommandLine|contains:
+        - 'enumerate'
+        - 'cas'
+        - '模板'
+        - 'template'
+        - 'vulnerable'
+  selection_certipy:
+    - Image|endswith:
+        - '\certipy.exe'
+        - '\Certipy.exe'
+    - CommandLine|contains:
+        - 'find'
+        - 'ca'
+        - 'template'
+        - 'vulnerable'
+  selection_adcs_enum:
+    - CommandLine|contains|all:
+        - 'certify'
+        - 'enumerate'
+    - CommandLine|contains|all:
+        - 'certipy'
+        - 'find'
+    - CommandLine|contains|all:
+        - 'Get-CertificateTemplate'
+        - 'Get-Certificate'
+  condition: selection_certify or selection_certipy or selection_adcs_enum
+falsepositives:
+  - 合法的 AD CS 管理脚本
+  - IT 管理员使用 Certify 进行安全审计
+level: medium
+---
+title: AD CS — 证书模板修改 (ESC1 提权)
+id: t1649-002
+status: experimental
+description: |
+  检测对 AD CS 证书模板的可疑修改操作，特别是 ESC1 提权攻击。
+
+  ESC1 攻击原理:
+  1. 修改证书模板的 msPKI-Certificate-Name-Flag 为 ENROLLEE_SUPPLIES_SUBJECT
+  2. 移除需要 CA 管理员批准的限制
+  3. 将模板的 authorized_signatures 设为 0
+  4. 请求证书时指定 UPN 为其他用户（如 Domain Admin）
+
+  检测特征:
+  - ADSI 修改证书模板对象属性
+  - Certify/Certipy 修改模板配置
+  - 直接 LDAP 修改 msPKI-* 属性
+
+  攻击者需要具有证书模板的 WriteProperty 或 WriteDACL 权限。
+
+references:
+  - https://posts.specterops.io/certified-pre-owned-d95910965cd2
+  - https://attack.mitre.org/techniques/T1649/001/
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.privilege_escalation
+  - attack.t1649
+  - attack.t1649.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_adsi_modify:
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'msPKI-Certificate-Name-Flag'
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'authorized-signatures'
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'msPKI-Enrollment-Flag'
+  selection_certify_modify:
+    Image|endswith:
+      - '\certify.exe'
+      - '\Certify.exe'
+    CommandLine|contains:
+      - 'update'
+      - 'modify'
+      - 'template'
+  selection_certipy_modify:
+    Image|endswith:
+      - '\certipy.exe'
+      - '\Certipy.exe'
+    CommandLine|contains:
+      - 'template'
+      - 'modify'
+  selection_ldap_modify:
+    CommandLine|contains|all:
+      - 'ldapmodify'
+      - 'msPKI-'
+    CommandLine|contains|all:
+      - 'Set-ItemProperty'
+      - 'HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc'
+  condition: selection_adsi_modify or selection_certify_modify or selection_certipy_modify or selection_ldap_modify
+falsepositives:
+  - 合法的证书模板管理（需要 AD CS 管理员权限）
+level: high
+---
+title: AD CS — 恶意证书请求 (影子凭据)
+id: t1649-003
+status: experimental
+description: |
+  检测使用影子凭据（Shadow Credentials）技术请求证书的行为。
+
+  影子凭据攻击原理:
+  1. 修改目标账户的 msDS-KeyCredentialLink 属性，添加攻击者控制的密钥
+  2. 使用该密钥请求 Kerberos PKINIT 票据
+  3. 从 PKINIT 响应中获取 NTLM 哈希
+  4. 使用获取的哈希进行 Pass-the-Hash 或其他认证
+
+  检测特征:
+  - Set-ADObject 修改 msDS-KeyCredentialLink
+  - Whisker 工具执行
+  - PKINIT 认证请求（EventID 4768，预认证类型 16）
+
+references:
+  - https://attack.mitre.org/techniques/T1556/001/
+  - https://github.com/eladshamir/Whisker
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.t1649
+  - attack.t1556
+  - attack.t1556.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_whisker:
+    - Image|endswith: '\Whisker.exe'
+    - CommandLine|contains:
+        - 'add'
+        - 'target'
+        - 'Whisker'
+  selection_shadow_creds:
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'msDS-KeyCredentialLink'
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'KeyCredentialLink'
+  selection_certipy_shadow:
+    Image|endswith: '\certipy.exe'
+    CommandLine|contains:
+      - 'shadow'
+      - 'credentials'
+  selection_pkinit_suspicious:
+    EventID: 4768
+    TicketEncryptionType: '0x10'  # PKINIT
+    TicketOptions: '0x40810000'
+    # 可疑的 UPN 不在已知用户列表中
+  condition: selection_whisker or selection_shadow_creds or selection_certipy_shadow or selection_pkinit_suspicious
+falsepositives:
+  - 合法的 KeyCredential 管理（AAD Connect 同步）
+level: critical
+---
+title: AD CS — 证书模板 ACL 篡改
+id: t1649-004
+status: experimental
+description: |
+  检测对证书模板 ACL (DACL/SACL) 的可疑修改。
+
+  攻击者通过修改证书模板的访问控制列表：
+  1. 添加低权限用户/组的 Enroll 权限
+  2. 移除 CA 管理员的管理权限
+  3. 添加 All-Extended-Right 权限
+  4. 修改 Owner 为攻击者可控账户
+
+  检测特征:
+  - dsacl 命令修改
+  - Set-Acl 修改证书模板权限
+  - ACL 审计日志（SACL）
+
+references:
+  - https://posts.specterops.io/certified-pre-owned-d95910965cd2
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.t1649
+  - attack.t1649.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_dsacl:
+    CommandLine|contains|all:
+      - 'dsacls'
+      - 'CN=Templates'
+    CommandLine|contains:
+      - 'ENROLL'
+      - 'All-Extended-Right'
+      - 'GenericAll'
+      - 'WriteDacl'
+      - 'WriteOwner'
+  selection_set_acl:
+    CommandLine|contains|all:
+      - 'Set-Acl'
+      - 'CertificateTemplate'
+  selection_powerhell_acl:
+    CommandLine|contains|all:
+      - 'Add-ADPermission'
+      - 'CertificateTemplate'
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - '-AclType'
+  selection_dcsync_prep:
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'NTSecurityDescriptor'
+  condition: selection_dsacl or selection_set_acl or selection_powerhell_acl or selection_dcsync_prep
+falsepositives:
+  - 合法的证书模板权限管理
+level: high
+---
+title: AD CS — CA 配置篡改
+id: t1649-005
+status: experimental
+description: |
+  检测对 CA（证书颁发机构）配置的可疑修改。
+
+  攻击者修改 CA 配置以：
+  1. 启用 CA 管理员证书映射（ESC6）
+  2. 修改 CA 扩展（EKU 变更）
+  3. 启用危险的 CA 策略
+  4. 添加/删除证书模板
+
+  检测特征:
+  - certutil 修改 CA 配置
+  - certsrv.msc 管理操作
+  - CA 注册表修改
+
+references:
+  - https://posts.specterops.io/certified-pre-owned-d95910965cd2
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.t1649
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_certutil_config:
+    Image|endswith: '\certutil.exe'
+    CommandLine|contains:
+      - '-config'
+      - '-setreg'
+      - '-view'
+      - '-ca'
+  selection_ca_reg_modify:
+    CommandLine|contains|all:
+      - 'Set-ItemProperty'
+      - 'HKLM:\SYSTEM\CurrentControlSet\Services\CertSvc\Configuration'
+    CommandLine|contains:
+      - 'ValidityPeriod'
+      - 'Extension'
+      - 'Policy'
+      - 'AuditFilter'
+  selection_ca_template_add:
+    CommandLine|contains|all:
+      - 'certutil'
+      - '-addstore'
+    CommandLine|contains|all:
+      - 'Install-AdcsCertificationAuthority'
+      - '-CAType'
+  selection_certsrv_mgmt:
+    Image|endswith: '\certsrv.msc'
+    CommandLine|contains:
+      - '/s'
+  condition: selection_certutil_config or selection_ca_reg_modify or selection_ca_template_add or selection_certsrv_mgmt
+falsepositives:
+  - CA 管理员的合法配置变更
+level: high
+---
+title: AD CS — 证书滥用横向移动
+id: t1649-006
+status: experimental
+description: |
+  检测使用已窃取或伪造的证书进行横向移动。
+
+  横向移动方式:
+  1. 使用窃取的证书进行 Kerberos PKINIT 认证
+  2. 使用证书进行 TLS 客户端认证
+  3. 使用证书进行 S/MIME 签名/加密
+  4. 使用证书进行代码签名
+
+  检测特征:
+  - EventID 4768 (Kerberos TGT) 预认证类型 16 (PKINIT)
+  - 证书指纹与已知恶意指纹匹配
+  - 非标准时间的 PKINIT 认证
+  - 从非域控制器发起的 PKINIT
+
+references:
+  - https://attack.mitre.org/techniques/T1649/
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.lateral_movement
+  - attack.credential_access
+  - attack.t1649
+  - attack.t1649.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_pkinit_auth:
+    EventID: 4768
+    TicketEncryptionType: '0x10'  # PKINIT (Diffie-Hellman)
+    TicketOptions: '0x40810000'
+  selection_pkinit_no_preauth:
+    EventID: 4768
+    PreAuthentType: '16'  # PKINIT
+    # 排除已知的合法 PKINIT 使用
+  filter_dc_pkinit:
+    # 域控制器的合法 PKINIT（如 ADFS）
+    TargetUserName|endswith: '$'
+  condition: (selection_pkinit_auth or selection_pkinit_no_preauth) and not filter_dc_pkinit
+falsepositives:
+  - ADFS 使用 PKINIT 进行认证
+  - Azure AD Connect 同步账户
+  - 合法的证书认证（如 smart card 登录）
+level: medium
+---
+title: AD CS — Certify/Certipy 执行检测
+id: t1649-007
+status: experimental
+description: |
+  检测 Certify 或 Certipy 工具的执行，这些工具是 AD CS 攻击的主要工具。
+
+  Certify (C#) 和 Certipy (Python) 功能:
+  - 枚举 AD CS 配置和可利用模板
+  - 执行 ESC1-ESC8 攻击
+  - 管理证书模板和 CA 配置
+  - 影子凭据攻击
+
+  检测特征:
+  - 工具名称匹配
+  - 命令行关键词匹配
+  - 父进程异常（非管理工具启动）
+
+references:
+  - https://github.com/GhostPack/Certify
+  - https://github.com/ly4k/Certipy
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.t1649
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_certify:
+    Image|endswith:
+      - '\certify.exe'
+      - '\Certify.exe'
+  selection_certipy:
+    Image|endswith:
+      - '\certipy.exe'
+      - '\Certipy.py'
+      - '\Certipy.exe'
+  selection_rubeus_cert:
+    Image|endswith: '\Rubeus.exe'
+    CommandLine|contains:
+      - 'asktgt'
+      - '/certificate:'
+      - '/enroll'
+  condition: selection_certify or selection_certipy or selection_rubeus_cert
+falsepositives:
+  - IT 管理员使用 Certify 进行审计
+  - 安全团队使用 Certipy 进行渗透测试
+level: high
+---
+title: AD CS — msDS-KeyCredentialLink 修改
+id: t1649-008
+status: experimental
+description: |
+  检测对 msDS-KeyCredentialLink 属性的修改，这是影子凭据攻击的核心。
+
+  当攻击者修改此属性时：
+  1. 添加包含攻击者公钥的 KeyCredential 条目
+  2. 使用 PKINIT 认证获取 Kerberos 票据
+  3. 从票据中提取 NTLM 哈希
+  4. 实现持久化（KeyCredential 在账户删除前持续有效）
+
+  检测特征:
+  - Set-ADObject 修改 msDS-KeyCredentialLink
+  - Whisker 工具执行
+  - ADSI 直接 LDAP 修改
+
+references:
+  - https://attack.mitre.org/techniques/T1556/001/
+  - https://github.com/eladshamir/Whisker
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.t1556
+  - attack.t1556.001
+  - attack.t1649
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_whisker:
+    Image|endswith: '\Whisker.exe'
+    CommandLine|contains:
+      - 'add'
+      - 'generate'
+      - 'remove'
+  selection_keycredlink_set:
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'msDS-KeyCredentialLink'
+  selection_keycredlink_adsi:
+    CommandLine|contains|all:
+      - '[System.DirectoryServices.DirectoryEntry]'
+      - 'msDS-KeyCredentialLink'
+  selection_certipy_shadow:
+    Image|endswith: '\certipy.exe'
+    CommandLine|contains:
+      - 'shadow'
+      - 'credentials'
+      - 'ca'
+  condition: selection_whisker or selection_keycredlink_set or selection_keycredlink_adsi or selection_certipy_shadow
+falsepositives:
+  - AAD Connect 同步 KeyCredential
+  - 合法的密钥凭据管理
+level: critical
+---
+title: AD CS — 证书服务持久化
+id: t1649-009
+status: experimental
+description: |
+  检测通过 AD CS 实现的持久化机制。
+
+  持久化方式:
+  1. 创建具有低门槛的证书模板（允许所有域用户注册）
+  2. 修改 CA 策略允许自动颁发
+  3. 创建隐藏的管理员证书模板
+  4. 修改现有模板的 EKU 允许所有用途
+
+  检测特征:
+  - 创建新的证书模板
+  - 修改 CA 颁发策略
+  - 添加新的注册机构
+  - 修改模板的 EKU（Extended Key Usage）
+
+references:
+  - https://posts.specterops.io/certified-pre-owned-d95910965cd2
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.persistence
+  - attack.credential_access
+  - attack.t1649
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_new_template:
+    CommandLine|contains|all:
+      - 'New-ADObject'
+      - 'pKIEnrollmentService'
+    CommandLine|contains:
+      - 'CertificateTemplate'
+  selection_ca_policy_change:
+    CommandLine|contains|all:
+      - 'certutil'
+      - '-setreg'
+    CommandLine|contains:
+      - 'Policy'
+      - 'Extension'
+  selection_template_enrollment:
+    CommandLine|contains|all:
+      - 'certutil'
+      - '-enrollment'
+    CommandLine|contains:
+      - 'ca'
+      - 'register'
+  selection_adcs_install:
+    CommandLine|contains|all:
+      - 'Install-AdcsCertificationAuthority'
+      - '-Force'
+  condition: selection_new_template or selection_ca_policy_change or selection_template_enrollment or selection_adcs_install
+falsepositives:
+  - 合法的 CA 安装和配置
+  - 证书模板的常规管理
+level: high
+---
+title: AD CS — 异常 PKINIT 认证
+id: t1649-010
+status: experimental
+description: |
+  检测异常的 PKINIT (Public Key Cryptography for Initial Authentication) 认证。
+
+  PKINIT 异常特征:
+  1. 非工作时间的 PKINIT 认证
+  2. 从非标准源 IP 的 PKINIT
+  3. 高频 PKINIT 认证请求
+  4. 使用非标准证书的 PKINIT
+
+  EventID 4768 字段分析:
+  - PreAuthentType = 16 (PKINIT)
+  - TicketEncryptionType = 0x10 (Diffie-Hellman)
+  - 不同于普通密码认证 (PreAuthentType = 2)
+
+references:
+  - https://attack.mitre.org/techniques/T1649/
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.t1649
+  - attack.t1649.003
+logsource:
+  product: windows
+  service: security
+detection:
+  selection_pkinit:
+    EventID: 4768
+    PreAuthentType: 16
+    TicketEncryptionType: '0x10'
+  filter_biz_hours:
+    # 工作时间内的合法 PKINIT（如 smart card）
+    # 此处使用时间范围排除，实际部署需根据环境调整
+    # TimeGenerated|timege: '08:00' and TimeGenerated|timele: '18:00'
+    # 注意：Sigma 标准不支持 timege/timele，此为逻辑示例
+  filter_service_accounts:
+    TargetUserName|endswith: '$'
+  filter_computer_accounts:
+    TargetUserName|endswith: '$'
+  condition: selection_pkinit and not filter_biz_hours and not filter_service_accounts and not filter_computer_accounts
+falsepositives:
+  - Smart card 登录
+  - ADFS 服务认证
+  - Azure AD Connect 同步
+level: medium
+---
+title: AD CS — 证书模板 EKU 篡改
+id: t1649-011
+status: experimental
+description: |
+  检测对证书模板扩展密钥用法 (EKU) 的可疑修改。
+
+  EKU 篡改攻击:
+  1. 将 Client Authentication (1.3.6.1.5.5.7.3.2) 添加到模板
+  2. 添加 Any Purpose EKU (2.5.29.37.0)
+  3. 移除所有 EKU 限制
+  4. 添加 Smart Card Logon (1.3.6.1.4.1.311.20.2.2)
+
+  攻击者通过 EKU 篡改:
+  - 使用非认证证书进行域认证
+  - 绕过证书用途限制
+  - 实现域持久化
+
+references:
+  - https://posts.specterops.io/certified-pre-owned-d95910965cd2
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.t1649
+  - attack.t1649.001
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_eku_modify:
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'pKIExtendedKeyUsage'
+  selection_eku_certutil:
+    Image|endswith: '\certutil.exe'
+    CommandLine|contains:
+      - '-setreg'
+      - 'EKU'
+  selection_eku_adsiedit:
+    CommandLine|contains|all:
+      - 'ADSI Edit'
+      - 'pKIExtendedKeyUsage'
+    CommandLine|contains|all:
+      - 'ldp.exe'
+      - 'pKIExtendedKeyUsage'
+  selection_eku_certify:
+    Image|endswith: '\certify.exe'
+    CommandLine|contains:
+      - 'update'
+      - 'template'
+      - 'EKU'
+  condition: selection_eku_modify or selection_eku_certutil or selection_eku_adsiedit or selection_eku_certify
+falsepositives:
+  - 合法的 EKU 配置变更
+level: high
+---
+title: AD CS — 多重 ESC 技术关联检测
+id: t1649-012
+status: experimental
+description: |
+  检测 AD CS 攻击链中的多重 ESC (Escalation of Certificate Services) 技术关联。
+
+  ESC 技术编号:
+  - ESC1: 证书模板提权（ENROLLEE_SUPPLIES_SUBJECT）
+  - ESC2: Any Purpose 证书滥用
+  - ESC3: Agent Certificate 注册
+  - ESC4: 证书模板 ACL 篡改
+  - ESC5: 域控制器证书滥用
+  - ESC6: CA 管理员证书映射
+  - ESC7: CA 权限滥用
+  - ESC8: HTTP Web Enrollment 漏洞
+
+  检测逻辑: 在时间窗口内检测到 2+ 种不同 ESC 技术的指标组合。
+
+references:
+  - https://posts.specterops.io/certified-pre-owned-d95910965cd2
+author: CodeShrimp
+date: 2026/05/14
+tags:
+  - attack.credential_access
+  - attack.privilege_escalation
+  - attack.t1649
+logsource:
+  category: process_creation
+  product: windows
+detection:
+  selection_esc1:
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'msPKI-Certificate-Name-Flag'
+  selection_esc2:
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'pKIExtendedKeyUsage'
+    CommandLine|contains:
+      - 'Any Purpose'
+  selection_esc3:
+    Image|endswith:
+      - '\certify.exe'
+      - '\certipy.exe'
+    CommandLine|contains:
+      - 'enroll'
+      - 'request'
+  selection_esc4:
+    CommandLine|contains|all:
+      - 'dsacls'
+      - 'CN=Templates'
+    CommandLine|contains:
+      - 'ENROLL'
+  selection_esc5:
+    CommandLine|contains|all:
+      - 'certutil'
+      - '-config'
+      - '-setreg'
+  selection_esc6:
+    CommandLine|contains|all:
+      - 'Set-ADObject'
+      - 'msPKI-Certificate-Name-Flag'
+    CommandLine|contains:
+      - 'ENROLLEE_SUPPLIES_SUBJECT'
+  selection_esc7:
+    Image|endswith: '\certutil.exe'
+    CommandLine|contains:
+      - 'admin'
+      - 'manage'
+  selection_esc8:
+    CommandLine|contains|all:
+      - 'certsrv'
+      - 'web'
+      - 'enroll'
+  condition: 2 of selection_esc*
+falsepositives:
+  - 合法的 AD CS 配置管理（需要管理员权限）
+level: critical
