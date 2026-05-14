@@ -1,89 +1,115 @@
 <!DOCTYPE html>
-<html lang="zh-CN">
+<html lang="zh-CN" data-theme="dark">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>SecShrimp Knowledge Hub</title>
+<meta name="description" content="安全虾知识库 — 从锅里爬出来的虾，脑子里装满了安全弹药。覆盖 Web/网络/云/AI/工具的全栈安全知识体系。">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+SC:wght@400;500;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
 :root {
-  --bg:#0a0e17;--bg2:#111827;--bg3:#1a2234;
-  --fg:#e2e8f0;--fg2:#94a3b8;--fg3:#64748b;
-  --accent:#f97316;--accent2:#fb923c;--accent-dim:rgba(249,115,22,.1);
-  --green:#22c55e;--red:#ef4444;--blue:#3b82f6;--purple:#a855f7;--cyan:#06b6d4;
-  --border:#1e293b;--border2:#334155;
-  --card:#111827;--radius:10px;--radius-lg:16px;
-  --sidebar-w:260px;
+  --bg:#0f1117;--bg2:#161b22;--bg3:#1c2128;
+  --fg:#e6edf3;--fg2:#8b949e;--fg3:#6e7681;
+  --accent:#22d3ee;--accent2:#06b6d4;--accent-dim:rgba(34,211,238,.08);
+  --amber:#f59e0b;--green:#34d399;--red:#ef4444;--blue:#3b82f6;--purple:#a855f7;
+  --border:#30363d;--border2:#21262d;
+  --sidebar-w:260px;--radius:8px;
+}
+[data-theme="light"] {
+  --bg:#ffffff;--bg2:#f6f8fa;--bg3:#f0f2f5;
+  --fg:#1f2328;--fg2:#656d76;--fg3:#8b949e;
+  --accent:#0969da;--accent2:#0550ae;--accent-dim:rgba(9,105,218,.06);
+  --border:#d0d7de;--border2:#d8dee4;
 }
 *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
 html{scroll-behavior:smooth;font-size:15px}
-body{font-family:'Segoe UI','Microsoft YaHei','PingFang SC',sans-serif;background:var(--bg);color:var(--fg);line-height:1.75;overflow-x:hidden}
-a{color:var(--blue);text-decoration:none}
+body{font-family:'Inter','Noto Sans SC',system-ui,sans-serif;background:var(--bg);color:var(--fg);line-height:1.75;overflow-x:hidden}
+a{color:var(--accent);text-decoration:none}
 a:hover{text-decoration:underline}
 ::selection{background:var(--accent);color:#fff}
 
+/* Sidebar */
 .sidebar{position:fixed;left:0;top:0;bottom:0;width:var(--sidebar-w);background:var(--bg2);border-right:1px solid var(--border);overflow-y:auto;z-index:100;transition:transform .3s}
-.sidebar-header{padding:20px 16px 14px;border-bottom:1px solid var(--border);background:linear-gradient(180deg,#151d2e 0%,var(--bg2) 100%)}
-.sidebar-header .logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
-.sidebar-header .logo-emoji{font-size:28px}
-.sidebar-header .logo-text{font-size:15px;font-weight:700;color:var(--accent)}
-.sidebar-header .logo-sub{font-size:11px;color:var(--fg3);letter-spacing:.5px}
+.sidebar-header{padding:20px 16px 14px;border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:4px}
+.logo-emoji{font-size:26px}
+.logo-text{font-size:15px;font-weight:700;color:var(--accent)}
+.logo-sub{font-size:10px;color:var(--fg3);letter-spacing:.5px;text-transform:uppercase}
 .nav-sec{padding:8px 0}
 .nav-sec-title{padding:8px 16px 4px;font-size:10px;text-transform:uppercase;color:var(--fg3);letter-spacing:1.5px;font-weight:700}
-.nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;color:var(--fg2);font-size:13px;cursor:pointer;transition:all .2s;border-left:2px solid transparent;text-decoration:none}
+.nav-item{display:flex;align-items:center;gap:8px;padding:7px 16px;color:var(--fg2);font-size:13px;cursor:pointer;transition:all .15s;border-left:2px solid transparent;text-decoration:none}
 .nav-item:hover{background:var(--accent-dim);color:var(--fg);text-decoration:none}
 .nav-item.active{color:var(--accent);background:var(--accent-dim);border-left-color:var(--accent);font-weight:600}
-.nav-icon{font-size:15px;width:22px;text-align:center;flex-shrink:0}
-.nav-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:8px;background:var(--border2);color:var(--fg3);font-weight:600}
+.nav-icon{font-size:14px;width:20px;text-align:center;flex-shrink:0}
+.nav-badge{margin-left:auto;font-size:10px;padding:1px 6px;border-radius:8px;background:var(--border);color:var(--fg3);font-weight:600}
 .sidebar-footer{padding:12px 16px;border-top:1px solid var(--border);font-size:10px;color:var(--fg3);text-align:center}
+.theme-toggle{background:var(--bg3);border:1px solid var(--border);color:var(--fg2);padding:4px 10px;border-radius:6px;cursor:pointer;font-size:13px;margin:8px 16px;width:calc(100% - 32px);transition:all .15s}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent)}
 
+/* Main */
 .main{margin-left:var(--sidebar-w);min-height:100vh}
-.topbar{position:sticky;top:0;z-index:50;padding:10px 28px;background:rgba(10,14,23,.85);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.topbar{position:sticky;top:0;z-index:50;padding:10px 28px;background:rgba(15,17,23,.88);backdrop-filter:blur(16px);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+[data-theme="light"] .topbar{background:rgba(255,255,255,.88)}
 .topbar-title{font-size:14px;font-weight:600}
 .topbar-meta{font-size:11px;color:var(--fg3)}
-.hamburger{display:none;background:none;border:none;color:var(--fg);font-size:22px;cursor:pointer;padding:4px 8px;margin-right:8px;border-radius:6px}
+.hamburger{display:none;background:none;border:none;color:var(--fg);font-size:20px;cursor:pointer;padding:4px 8px;margin-right:8px;border-radius:6px}
+.hamburger:hover{background:var(--accent-dim)}
 .content{padding:28px 32px;max-width:960px}
 
-.hero{position:relative;border-radius:var(--radius-lg);padding:36px 32px;margin-bottom:40px;overflow:hidden;background:linear-gradient(135deg,#1a0a2e 0%,#0a1628 40%,#0a1a14 70%,#1a1400 100%);border:1px solid var(--border)}
-.hero::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 70% 30%,rgba(249,115,22,.08) 0%,transparent 60%);pointer-events:none}
-.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--accent-dim);border:1px solid rgba(249,115,22,.3);border-radius:20px;font-size:11px;color:var(--accent);margin-bottom:14px;font-weight:600}
-.hero h1{font-size:26px;font-weight:800;margin-bottom:6px;letter-spacing:-.5px;background:linear-gradient(135deg,var(--fg) 0%,var(--accent2) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.hero .hero-sub{font-size:14px;color:var(--fg2);margin-bottom:20px;max-width:520px}
-.hero .hero-quote{font-size:13px;color:var(--fg3);font-style:italic;margin-bottom:20px;padding-left:12px;border-left:2px solid var(--accent)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px}
-.stat{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:var(--radius);padding:14px 12px;text-align:center;transition:all .2s}
+/* Hero */
+.hero{position:relative;border-radius:var(--radius);padding:32px 28px;margin-bottom:36px;overflow:hidden;background:linear-gradient(135deg,var(--bg3) 0%,var(--bg2) 100%);border:1px solid var(--border)}
+.hero-badge{display:inline-flex;align-items:center;gap:6px;padding:4px 12px;background:var(--accent-dim);border:1px solid var(--accent);border-radius:20px;font-size:11px;color:var(--accent);margin-bottom:12px;font-weight:600}
+.hero h1{font-size:24px;font-weight:800;margin-bottom:6px;letter-spacing:-.5px}
+.hero .hero-sub{font-size:13px;color:var(--fg2);margin-bottom:16px;max-width:520px}
+.hero .hero-quote{font-size:12px;color:var(--fg3);font-style:italic;padding-left:12px;border-left:2px solid var(--accent)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+.stat{background:var(--bg);border:1px solid var(--border);border-radius:var(--radius);padding:12px;text-align:center;transition:all .15s}
 .stat:hover{border-color:var(--accent);background:var(--accent-dim)}
-.stat .val{font-size:24px;font-weight:800;color:var(--accent)}
+.stat .val{font-size:22px;font-weight:800;color:var(--accent)}
 .stat .lbl{font-size:10px;color:var(--fg3);margin-top:2px;text-transform:uppercase;letter-spacing:.5px}
 
-.content-section{margin-bottom:52px;scroll-margin-top:60px}
-.section-header{margin-bottom:24px;padding-bottom:16px;border-bottom:1px solid var(--border)}
-.section-title{font-size:22px;font-weight:700;display:flex;align-items:center;gap:10px}
-.section-desc{font-size:12px;color:var(--fg3);margin-top:4px}
+/* Learning Path */
+.path-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:10px;margin:20px 0}
+.path-card{background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);padding:14px;transition:all .15s;cursor:default}
+.path-card:hover{border-color:var(--accent);transform:translateY(-2px);box-shadow:0 4px 12px rgba(0,0,0,.15)}
+.path-num{font-size:10px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:4px}
+.path-title{font-size:13px;font-weight:600;color:var(--fg);margin-bottom:4px}
+.path-desc{font-size:11px;color:var(--fg3);line-height:1.4}
 
-.markdown-body h1{font-size:24px;font-weight:700;color:var(--accent);margin:32px 0 16px;padding-bottom:8px;border-bottom:1px solid var(--border)}
-.markdown-body h2{font-size:20px;font-weight:700;color:var(--accent);margin:28px 0 14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
-.markdown-body h3{font-size:16px;font-weight:700;color:var(--accent2);margin:24px 0 10px;display:flex;align-items:center;gap:8px}
-.markdown-body h3::before{content:'';width:3px;height:14px;background:var(--accent);border-radius:2px;flex-shrink:0}
-.markdown-body h4{font-size:14px;font-weight:600;color:var(--fg);margin:18px 0 8px}
-.markdown-body p{margin:8px 0;color:var(--fg2);font-size:14px}
-.markdown-body ul,.markdown-body ol{margin:8px 0 8px 24px;color:var(--fg2);font-size:14px}
-.markdown-body li{margin:4px 0}
+/* Content */
+.content-section{margin-bottom:40px;scroll-margin-top:60px}
+.section-header{margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border)}
+.section-title{font-size:20px;font-weight:700;display:flex;align-items:center;gap:8px}
+.section-desc{font-size:12px;color:var(--fg3);margin-top:4px}
+.markdown-body{font-size:14px;color:var(--fg2)}
+.markdown-body h1{font-size:22px;font-weight:700;color:var(--fg);margin:28px 0 12px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.markdown-body h2{font-size:18px;font-weight:700;color:var(--fg);margin:24px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--border)}
+.markdown-body h3{font-size:15px;font-weight:600;color:var(--accent);margin:20px 0 8px}
+.markdown-body p{margin:6px 0}
+.markdown-body ul,.markdown-body ol{margin:6px 0 6px 20px}
+.markdown-body li{margin:3px 0}
 .markdown-body strong{color:var(--fg);font-weight:600}
-.markdown-body em{color:var(--fg3);font-style:italic}
-.markdown-body hr{border:none;border-top:1px solid var(--border);margin:24px 0}
-.markdown-body blockquote{border-left:3px solid var(--accent);padding:8px 16px;margin:12px 0;background:var(--accent-dim);border-radius:0 var(--radius) var(--radius) 0;color:var(--fg2);font-size:13px}
-.markdown-body code{background:var(--bg3);padding:2px 6px;border-radius:4px;font-size:12px;font-family:'Cascadia Code','Fira Code','Consolas',monospace;color:var(--cyan)}
-.markdown-body pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin:14px 0;overflow-x:auto}
-.markdown-body pre code{background:none;padding:0;color:var(--fg);font-size:12.5px;line-height:1.6}
-.markdown-body a{color:var(--blue)}
-.markdown-body table{width:100%;border-collapse:collapse;font-size:13px;margin:14px 0}
-.markdown-body th{background:var(--bg3);color:var(--accent);font-weight:600;text-align:left;padding:10px 14px;border-bottom:2px solid var(--border)}
-.markdown-body td{padding:8px 14px;border-bottom:1px solid var(--border);color:var(--fg2)}
-.markdown-body tr:hover td{background:rgba(249,115,22,.03)}
+.markdown-body code{background:var(--bg3);padding:2px 5px;border-radius:4px;font-size:12px;font-family:'JetBrains Mono',monospace;color:var(--accent)}
+.markdown-body pre{background:var(--bg3);border:1px solid var(--border);border-radius:var(--radius);padding:14px;margin:12px 0;overflow-x:auto}
+.markdown-body pre code{background:none;padding:0;color:var(--fg);font-size:12px;line-height:1.6}
+.markdown-body table{width:100%;border-collapse:collapse;font-size:13px;margin:12px 0}
+.markdown-body th{background:var(--bg3);color:var(--accent);font-weight:600;text-align:left;padding:8px 12px;border-bottom:2px solid var(--border)}
+.markdown-body td{padding:7px 12px;border-bottom:1px solid var(--border);color:var(--fg2)}
+.markdown-body tr:hover td{background:var(--accent-dim)}
+.markdown-body blockquote{border-left:3px solid var(--accent);padding:8px 14px;margin:12px 0;background:var(--accent-dim);border-radius:0 var(--radius) var(--radius) 0;font-size:13px}
+.markdown-body a{color:var(--accent)}
+.markdown-body hr{border:none;border-top:1px solid var(--border);margin:20px 0}
 
 .loading{text-align:center;padding:40px;color:var(--fg3)}
-.loading::after{content:'';display:inline-block;width:20px;height:20px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 1s linear infinite;margin-left:8px;vertical-align:middle}
+.loading::after{content:'';display:inline-block;width:18px;height:18px;border:2px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin .8s linear infinite;margin-left:8px;vertical-align:middle}
 @keyframes spin{to{transform:rotate(360deg)}}
+.error{color:var(--red);padding:12px;background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.2);border-radius:var(--radius);font-size:13px}
+
+/* Back to top */
+.back-top{position:fixed;bottom:24px;right:24px;width:40px;height:40px;border-radius:50%;background:var(--accent);color:var(--bg);border:none;cursor:pointer;font-size:18px;display:none;align-items:center;justify-content:center;z-index:99;box-shadow:0 2px 10px rgba(0,0,0,.3);transition:opacity .2s}
+.back-top.show{display:flex}
 
 @media(max-width:768px){
   .sidebar{transform:translateX(-100%)}
@@ -91,6 +117,8 @@ a:hover{text-decoration:underline}
   .main{margin-left:0}
   .hamburger{display:block}
   .content{padding:16px}
+  .stats{grid-template-columns:repeat(2,1fr)}
+  .path-grid{grid-template-columns:1fr 1fr}
 }
 </style>
 </head>
@@ -103,12 +131,9 @@ a:hover{text-decoration:underline}
     </div>
     <div class="logo-sub">SecShrimp Knowledge Hub</div>
   </div>
-  <nav class="nav-sec" id="nav-container">
-    <!-- 动态生成导航 -->
-  </nav>
-  <div class="sidebar-footer" id="sidebar-footer">
-    🦐 安全虾 · 加载中...
-  </div>
+  <nav class="nav-sec" id="nav-container"></nav>
+  <button class="theme-toggle" onclick="toggleTheme()">🌓 切换主题</button>
+  <div class="sidebar-footer" id="sidebar-footer">🦐 安全虾 · 加载中...</div>
 </aside>
 
 <div class="main">
@@ -117,217 +142,222 @@ a:hover{text-decoration:underline}
     <div class="topbar-title">🦐 安全虾知识库</div>
     <div class="topbar-meta" id="topbar-meta">加载中...</div>
   </div>
-
   <div class="content">
     <div class="hero">
       <div class="hero-badge">🦐 SECURITY KNOWLEDGE HUB</div>
       <h1>安全虾知识库</h1>
-      <p class="hero-sub">从锅里爬出来的虾，把知识嚼碎了咽下去。覆盖 Web/网络/云/AI/工具的全栈安全知识体系。</p>
+      <p class="hero-sub">从锅里爬出来的虾，脑子里装满了安全弹药。覆盖攻击/防御/AI/工具的全栈安全知识体系。</p>
       <div class="hero-quote">"最好的防御，是比攻击者更了解攻击。"</div>
-      <div class="stats" id="stats-container">
-        <!-- 动态生成统计 -->
+      <div class="stats" id="stats-container"></div>
+    </div>
+
+    <div class="content-section" id="learning-path">
+      <div class="section-header">
+        <h1 class="section-title">🛤️ 学习路径</h1>
+        <div class="section-desc">从零基础到全栈安全研究员</div>
+      </div>
+      <div class="path-grid">
+        <div class="path-card"><div class="path-num">Phase 1</div><div class="path-title">基础入门</div><div class="path-desc">HTTP / Web安全 / Nmap / Linux基础</div></div>
+        <div class="path-card"><div class="path-num">Phase 2</div><div class="path-title">渗透实战</div><div class="path-desc">漏洞利用 / 后渗透 / Burp / Metasploit</div></div>
+        <div class="path-card"><div class="path-num">Phase 3</div><div class="path-title">域渗透 & 云</div><div class="path-desc">AD攻击 / AWS / Docker / K8s</div></div>
+        <div class="path-card"><div class="path-num">Phase 4</div><div class="path-title">AI安全 & 红队</div><div class="path-desc">Prompt Injection / Agent / MCP</div></div>
+        <div class="path-card"><div class="path-num">Phase 5</div><div class="path-title">高级研究</div><div class="path-desc">漏洞挖掘 / 逆向 / 安全运营</div></div>
       </div>
     </div>
 
-    <div id="content-container">
-      <div class="loading">正在加载知识库</div>
-    </div>
+    <div id="content-container"><div class="loading">正在加载知识库</div></div>
   </div>
 </div>
 
+<button class="back-top" id="backTop" onclick="window.scrollTo({top:0,behavior:'smooth'})">↑</button>
+
 <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 <script>
-// 知识库文件配置
-const KNOWLEDGE_FILES = [
-  // 安全虾知识
-  { id: 'secshrimp-attack', name: '攻击手法', icon: '⚔️', file: 'secshrimp/attack-techniques.md', badge: '6', section: 'secshrimp' },
-  { id: 'secshrimp-defense', name: '防御策略', icon: '🛡️', file: 'secshrimp/defense-strategies.md', badge: '8', section: 'secshrimp' },
-  { id: 'secshrimp-cloud', name: '云安全', icon: '☁️', file: 'secshrimp/cloud-container-security.md', badge: '5', section: 'secshrimp' },
-  { id: 'secshrimp-ai', name: 'AI/LLM 安全', icon: '🤖', file: 'secshrimp/llm-security.md', badge: '9', section: 'secshrimp' },
-  { id: 'secshrimp-cve', name: 'CVE 追踪', icon: '🔍', file: 'secshrimp/cve-tracker.md', badge: '2', section: 'secshrimp' },
-  { id: 'secshrimp-tools', name: '工具笔记', icon: '🔧', file: 'secshrimp/tool-notes.md', badge: '9', section: 'secshrimp' },
-  { id: 'secshrimp-workflows', name: '安全工作流', icon: '📋', file: 'secshrimp/workflows.md', badge: '4', section: 'secshrimp' },
-  { id: 'secshrimp-roadmap', name: '学习路线', icon: '🗺️', file: 'secshrimp/security-roadmap.md', badge: '3', section: 'secshrimp' },
-  // 代码虾知识
-  { id: 'codeshrimp-roadmap', name: '进化路线图', icon: '📊', file: 'codeshrimp/coder-roadmap.md', badge: '30+', section: 'codeshrimp' },
-  { id: 'codeshrimp-ai-sec', name: 'AI 安全模板', icon: '🧪', file: 'codeshrimp/templates/ai-security/README.md', badge: '8', section: 'codeshrimp' },
-  { id: 'codeshrimp-detection', name: '检测规则模板', icon: '📡', file: 'codeshrimp/templates/detection/README.md', badge: '20', section: 'codeshrimp' },
-  { id: 'codeshrimp-network', name: '网络安全工具', icon: '🌐', file: 'codeshrimp/templates/network/README.md', badge: '3', section: 'codeshrimp' },
-  { id: 'codeshrimp-web', name: 'Web 安全工具', icon: '🕸️', file: 'codeshrimp/templates/web/README.md', badge: '6', section: 'codeshrimp' },
-  { id: 'codeshrimp-utils', name: '通用工具库', icon: '⚙️', file: 'codeshrimp/templates/utils/README.md', badge: '4', section: 'codeshrimp' },
-  // 共享知识
-  { id: 'shared-malware', name: '恶意下载检测', icon: '🦠', file: 'shared/malware-detect/README.md', badge: '22', section: 'shared' },
-  { id: 'shared-malware-design', name: '检测引擎设计', icon: '📐', file: 'shared/malware-detect/DESIGN.md', badge: '设计', section: 'shared' },
+// ===== 知识库文件配置（新路径）=====
+const KB = [
+  // 攻击面
+  { id:'web-attacks', name:'Web 攻击', icon:'⚔️', file:'secshrimp/attacks/web-attacks.md', cat:'attacks', badge:'★★★' },
+  { id:'network-attacks', name:'网络攻击', icon:'🌐', file:'secshrimp/attacks/network-attacks.md', cat:'attacks', badge:'★★★★' },
+  { id:'social-eng', name:'社会工程', icon:'🎣', file:'secshrimp/attacks/social-engineering.md', cat:'attacks', badge:'★★' },
+  { id:'cloud-attacks', name:'云攻击', icon:'☁️', file:'secshrimp/attacks/cloud-attacks.md', cat:'attacks', badge:'★★★★' },
+  { id:'supply-chain', name:'供应链攻击', icon:'📦', file:'secshrimp/attacks/supply-chain.md', cat:'attacks', badge:'★★★' },
+  { id:'api-cicd', name:'API/CI-CD 攻击', icon:'🔌', file:'secshrimp/attacks/api-cicd-attacks.md', cat:'attacks', badge:'★★★' },
+  // 防御面
+  { id:'web-defense', name:'Web 防御', icon:'🛡️', file:'secshrimp/defense/web-defense.md', cat:'defense', badge:'★★★' },
+  { id:'network-defense', name:'网络防御', icon:'🔒', file:'secshrimp/defense/network-defense.md', cat:'defense', badge:'★★★' },
+  { id:'endpoint-defense', name:'端点防护', icon:'💻', file:'secshrimp/defense/endpoint-defense.md', cat:'defense', badge:'★★★' },
+  { id:'cloud-defense', name:'云安全加固', icon:'🏰', file:'secshrimp/defense/cloud-defense.md', cat:'defense', badge:'★★★' },
+  // AI 安全
+  { id:'prompt-injection', name:'Prompt Injection', icon:'💉', file:'secshrimp/ai-security/prompt-injection.md', cat:'ai', badge:'★★★' },
+  { id:'agent-security', name:'Agent 安全', icon:'🤖', file:'secshrimp/ai-security/agent-security.md', cat:'ai', badge:'★★★★' },
+  { id:'mcp-security', name:'MCP 安全', icon:'🔗', file:'secshrimp/ai-security/mcp-security.md', cat:'ai', badge:'★★★★' },
+  // 工具
+  { id:'burp', name:'Burp Suite', icon:'🔧', file:'secshrimp/tools/burp-suite.md', cat:'tools', badge:'★★★' },
+  { id:'nmap', name:'Nmap / Masscan', icon:'📡', file:'secshrimp/tools/nmap-masscan.md', cat:'tools', badge:'★★' },
+  { id:'msf', name:'Metasploit', icon:'💥', file:'secshrimp/tools/metasploit.md', cat:'tools', badge:'★★★' },
+  { id:'bloodhound', name:'BloodHound / Rubeus', icon:'🦇', file:'secshrimp/tools/bloodhound-mimikatz.md', cat:'tools', badge:'★★★★' },
+  { id:'ida', name:'IDA / Ghidra / YARA', icon:'🔬', file:'secshrimp/tools/ida-ghidra.md', cat:'tools', badge:'★★★★' },
+  // 情报 & 项目
+  { id:'cve', name:'CVE 追踪', icon:'🔍', file:'secshrimp/intel/cve-tracker.md', cat:'intel', badge:'🔥' },
+  { id:'malware', name:'恶意下载检测引擎', icon:'🦠', file:'secshrimp/projects/malware-detect-engine.md', cat:'projects', badge:'v2' },
+  // 路线
+  { id:'roadmap', name:'学习路线图', icon:'🗺️', file:'secshrimp/career/roadmap.md', cat:'career', badge:'📈' },
+  { id:'skill', name:'能力矩阵', icon:'📊', file:'secshrimp/career/skill-matrix.md', cat:'career', badge:'📋' },
 ];
 
-let totalLines = 0;
-let totalSize = 0;
+const CATS = {
+  attacks:  { title:'⚔️ 攻击面 (Offense)', order:0 },
+  defense:  { title:'🛡️ 防御面 (Defense)', order:1 },
+  ai:       { title:'🤖 AI 安全', order:2 },
+  tools:    { title:'🧰 工具箱 (Toolbox)', order:3 },
+  intel:    { title:'🔬 情报追踪', order:4 },
+  projects: { title:'🚀 项目实战', order:5 },
+  career:   { title:'📈 进化路线', order:6 },
+};
 
-// 生成导航
+let totalLines = 0, totalSize = 0;
+
+// Theme
+function toggleTheme() {
+  const html = document.documentElement;
+  const current = html.getAttribute('data-theme');
+  const next = current === 'dark' ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('theme', next);
+}
+(function() {
+  const saved = localStorage.getItem('theme');
+  if (saved) document.documentElement.setAttribute('data-theme', saved);
+})();
+
+// Nav
 function renderNav() {
-  const container = document.getElementById('nav-container');
-
-  // 按 section 分组
-  const sections = {
-    secshrimp: { title: '🦐 安全虾知识', items: [] },
-    codeshrimp: { title: '💻 代码虾知识', items: [] },
-    shared: { title: '🔗 共享知识', items: [] },
-  };
-
-  KNOWLEDGE_FILES.forEach(f => {
-    sections[f.section].items.push(f);
+  const c = document.getElementById('nav-container');
+  const grouped = {};
+  KB.forEach(f => {
+    if (!grouped[f.cat]) grouped[f.cat] = [];
+    grouped[f.cat].push(f);
   });
-
-  let navHTML = '';
-  for (const [key, sec] of Object.entries(sections)) {
-    if (sec.items.length === 0) continue;
-    navHTML += `<div class="nav-sec-title">${sec.title}</div>`;
-    navHTML += sec.items.map(f =>
-      `<a class="nav-item" href="#${f.id}" data-section="${f.id}" onclick="loadSection('${f.id}')"><span class="nav-icon">${f.icon}</span><span class="nav-text">${f.name}</span><span class="nav-badge">${f.badge}</span></a>`
+  const sorted = Object.entries(CATS).sort((a,b) => a[1].order - b[1].order);
+  let html = '';
+  for (const [cat, meta] of sorted) {
+    const items = grouped[cat] || [];
+    if (!items.length) continue;
+    html += `<div class="nav-sec-title">${meta.title}</div>`;
+    html += items.map(f =>
+      `<a class="nav-item" href="#${f.id}" data-id="${f.id}"><span class="nav-icon">${f.icon}</span><span>${f.name}</span><span class="nav-badge">${f.badge}</span></a>`
     ).join('');
   }
-
-  container.innerHTML = navHTML;
+  c.innerHTML = html;
+  c.querySelectorAll('.nav-item').forEach(a => {
+    a.addEventListener('click', e => {
+      e.preventDefault();
+      loadOne(a.dataset.id);
+      document.getElementById('sidebar').classList.remove('open');
+    });
+  });
 }
 
-// 加载单个 section
-async function loadSection(fileId) {
-  const file = KNOWLEDGE_FILES.find(f => f.id === fileId);
+// Load one section
+async function loadOne(id) {
+  const file = KB.find(f => f.id === id);
   if (!file) return;
-
-  const container = document.getElementById('content-container');
-  container.innerHTML = '<div class="loading">正在加载 ' + file.name + '</div>';
-
+  const c = document.getElementById('content-container');
+  c.innerHTML = `<div class="loading">正在加载 ${file.name}</div>`;
   try {
-    const response = await fetch(file.file);
-    if (!response.ok) throw new Error('HTTP ' + response.status);
-    const md = await response.text();
-
+    const r = await fetch(file.file);
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const md = await r.text();
     totalLines += md.split('\n').length;
     totalSize += md.length;
-
-    const html = marked.parse(md);
-    container.innerHTML = `
-      <section class="content-section" id="${file.id}">
-        <div class="section-header">
-          <h1 class="section-title">${file.icon} ${file.name}</h1>
-        </div>
-        <div class="markdown-body">${html}</div>
-      </section>
-    `;
-
-    // 更新导航高亮
+    c.innerHTML = `<section class="content-section" id="${file.id}">
+      <div class="section-header"><h1 class="section-title">${file.icon} ${file.name}</h1></div>
+      <div class="markdown-body">${marked.parse(md)}</div>
+    </section>`;
     document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-    const activeNav = document.querySelector(`.nav-item[data-section="${fileId}"]`);
-    if (activeNav) activeNav.classList.add('active');
-
-    // 更新统计
+    const nav = document.querySelector(`.nav-item[data-id="${id}"]`);
+    if (nav) nav.classList.add('active');
     updateStats();
+    window.scrollTo({top: 0, behavior: 'smooth'});
   } catch (err) {
-    container.innerHTML = `<div class="loading" style="color:var(--red)">加载失败: ${err.message}</div>`;
+    c.innerHTML = `<div class="error">⚠️ 加载失败: ${file.name} — ${err.message}<br>文件路径: ${file.file}</div>`;
   }
 }
 
-// 加载所有 sections
-async function loadAllSections() {
-  const container = document.getElementById('content-container');
-  totalLines = 0;
-  totalSize = 0;
-
-  // 按 section 分组加载
-  const sections = {
-    secshrimp: { title: '🦐 安全虾知识', icon: '🦐', items: [] },
-    codeshrimp: { title: '💻 代码虾知识', icon: '💻', items: [] },
-    shared: { title: '🔗 共享知识', icon: '🔗', items: [] },
-  };
-
-  KNOWLEDGE_FILES.forEach(f => {
-    sections[f.section].items.push(f);
-  });
-
-  let allHTML = '';
-
-  for (const [key, sec] of Object.entries(sections)) {
-    if (sec.items.length === 0) continue;
-
-    allHTML += `<div class="section-header"><h1 class="section-title">${sec.title}</h1></div>`;
-
-    for (const file of sec.items) {
+// Load all
+async function loadAll() {
+  const c = document.getElementById('content-container');
+  totalLines = 0; totalSize = 0;
+  const grouped = {};
+  KB.forEach(f => { if (!grouped[f.cat]) grouped[f.cat] = []; grouped[f.cat].push(f); });
+  const sorted = Object.entries(CATS).sort((a,b) => a[1].order - b[1].order);
+  let html = '';
+  for (const [cat, meta] of sorted) {
+    const items = grouped[cat] || [];
+    if (!items.length) continue;
+    html += `<div class="content-section"><div class="section-header"><h1 class="section-title">${meta.title}</h1></div>`;
+    for (const file of items) {
       try {
-        const response = await fetch(file.file);
-        if (!response.ok) throw new Error('HTTP ' + response.status);
-        const md = await response.text();
-
+        const r = await fetch(file.file);
+        if (!r.ok) throw new Error('HTTP ' + r.status);
+        const md = await r.text();
         totalLines += md.split('\n').length;
         totalSize += md.length;
-
-        const html = marked.parse(md);
-        allHTML += `
-          <section class="content-section" id="${file.id}">
-            <div class="section-header">
-              <h2 class="section-title">${file.icon} ${file.name}</h2>
-            </div>
-            <div class="markdown-body">${html}</div>
-          </section>
-        `;
+        html += `<section class="content-section" id="${file.id}" style="margin-bottom:32px;padding-bottom:24px;border-bottom:1px solid var(--border)">
+          <h2 class="section-title" style="font-size:17px;margin-bottom:12px">${file.icon} ${file.name}</h2>
+          <div class="markdown-body">${marked.parse(md)}</div>
+        </section>`;
       } catch (err) {
-        allHTML += `
-          <section class="content-section" id="${file.id}">
-            <div class="section-header">
-              <h2 class="section-title">${file.icon} ${file.name}</h2>
-            </div>
-            <div class="markdown-body" style="color:var(--red)">加载失败: ${err.message}</div>
-          </section>
-        `;
+        html += `<section class="content-section" id="${file.id}" style="margin-bottom:24px">
+          <h2 class="section-title" style="font-size:17px">${file.icon} ${file.name}</h2>
+          <div class="error">⚠️ 加载失败: ${err.message}</div>
+        </section>`;
       }
     }
+    html += `</div>`;
   }
-
-  container.innerHTML = allHTML;
-  updateStats();
-  updateFooter();
-
-  // 设置滚动观察器
-  setupScrollObserver();
+  c.innerHTML = html;
+  updateStats(); updateFooter();
+  setupScrollSpy();
 }
 
-// 更新统计
 function updateStats() {
-  const sizeKB = (totalSize / 1024).toFixed(1);
+  const kb = (totalSize / 1024).toFixed(1);
   document.getElementById('stats-container').innerHTML = `
-    <div class="stat"><div class="val">${KNOWLEDGE_FILES.length}</div><div class="lbl">知识模块</div></div>
+    <div class="stat"><div class="val">${KB.length}</div><div class="lbl">知识模块</div></div>
     <div class="stat"><div class="val">${totalLines}+</div><div class="lbl">总行数</div></div>
-    <div class="stat"><div class="val">${sizeKB}</div><div class="lbl">KB 内容</div></div>
-    <div class="stat"><div class="val">3</div><div class="lbl">知识分区</div></div>
-  `;
-  document.getElementById('topbar-meta').textContent = `${KNOWLEDGE_FILES.length} modules · ${totalLines}+ lines · ${sizeKB} KB`;
+    <div class="stat"><div class="val">${kb}</div><div class="lbl">KB 内容</div></div>
+    <div class="stat"><div class="val">${Object.keys(CATS).length}</div><div class="lbl">分区</div></div>`;
+  document.getElementById('topbar-meta').textContent = `${KB.length} modules · ${totalLines}+ lines · ${kb} KB`;
 }
 
-// 更新页脚
 function updateFooter() {
-  const now = new Date().toISOString().split('T')[0];
-  document.getElementById('sidebar-footer').innerHTML = `🦐 安全虾 · ${KNOWLEDGE_FILES.length} 模块 · ${totalLines}+ 行<br>最后更新: ${now}`;
+  document.getElementById('sidebar-footer').innerHTML = `🦐 安全虾 · ${KB.length} 模块 · ${totalLines}+ 行<br>${new Date().toISOString().split('T')[0]}`;
 }
 
-// 滚动观察器
-function setupScrollObserver() {
-  const sections = document.querySelectorAll('.content-section');
+function setupScrollSpy() {
+  const sections = document.querySelectorAll('.content-section[id]');
   const navItems = document.querySelectorAll('.nav-item');
-  const observer = new IntersectionObserver(entries => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
+  const obs = new IntersectionObserver(entries => {
+    entries.forEach(e => {
+      if (e.isIntersecting) {
         navItems.forEach(n => n.classList.remove('active'));
-        const activeNav = document.querySelector(`.nav-item[data-section="${entry.target.id}"]`);
-        if (activeNav) activeNav.classList.add('active');
+        const n = document.querySelector(`.nav-item[data-id="${e.target.id}"]`);
+        if (n) { n.classList.add('active'); n.scrollIntoView({block:'nearest'}); }
       }
     });
-  }, { threshold: 0.1, rootMargin: '-60px 0px -70% 0px' });
-  sections.forEach(s => observer.observe(s));
+  }, { threshold:0.1, rootMargin:'-60px 0px -70% 0px' });
+  sections.forEach(s => obs.observe(s));
 }
 
-// 初始化
+// Back to top
+window.addEventListener('scroll', () => {
+  document.getElementById('backTop').classList.toggle('show', window.scrollY > 400);
+});
+
+// Init
 renderNav();
-loadAllSections();
+loadAll();
 </script>
 </body>
 </html>
