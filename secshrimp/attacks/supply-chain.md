@@ -99,3 +99,11 @@ express     → exprez / exprss
 ---
 
 _→ 参见 [`ai-security/mcp-security.md`](../ai-security/mcp-security.md) 获取 MCP 供应链攻击详情_
+
+---
+
+## 相关主题
+
+- **MCP 安全:** [ai-security/mcp-security.md](../ai-security/mcp-security.md) - MCP 供应链攻击
+- **API/CI-CD:** [api-cicd-attacks.md](api-cicd-attacks.md) - GitHub Actions / Docker 投毒
+- **防御:** [defense/endpoint-defense.md](../defense/endpoint-defense.md) - 依赖审计 / 补丁管理

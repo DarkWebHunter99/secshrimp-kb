@@ -113,3 +113,11 @@ spec:
 ---
 
 _→ 攻击手法详见 [`attacks/cloud-attacks.md`](../attacks/cloud-attacks.md)_
+
+---
+
+## 相关主题
+
+- **云攻击:** [attacks/cloud-attacks.md](../attacks/cloud-attacks.md) - AWS IAM 提权 / Docker 逃逸
+- **端点防护:** [endpoint-defense.md](endpoint-defense.md) - EDR / 凭证保护
+- **项目:** [projects/malware-detect-engine.md](../projects/malware-detect-engine.md) - 检测引擎

@@ -105,3 +105,12 @@ query {
 
 _→ 参见 [`attacks/web-attacks.md`](web-attacks.md) 获取 Web 攻击基础_
 _→ 参见 [`defense/web-defense.md`](../defense/web-defense.md) 获取 API 安全防御_
+
+---
+
+## 相关主题
+
+- **Web 攻击:** [web-attacks.md](web-attacks.md) - SQLi / XSS / SSRF 基础
+- **Web 防御:** [defense/web-defense.md](../defense/web-defense.md) - API 安全防御
+- **供应链:** [supply-chain.md](supply-chain.md) - CI-CD 投毒
+- **工具:** [tools/burp-suite.md](../tools/burp-suite.md) - Burp Suite API 测试

@@ -35,3 +35,10 @@
 ---
 
 _→ 学习路线详见 [`career/roadmap.md`](roadmap.md)_
+
+---
+
+## 相关主题
+
+- **学习路线:** [roadmap.md](roadmap.md) - 优先级排序 + 资源推荐
+- **知识库导航:** [INDEX.md](../INDEX.md) - 完整知识体系

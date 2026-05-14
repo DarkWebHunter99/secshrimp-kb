@@ -112,3 +112,11 @@ tags:
 
 _→ 参见 [`defense/web-defense.md`](web-defense.md) 获取应用层防御_
 _→ 参见 [`defense/endpoint-defense.md`](endpoint-defense.md) 获取端点防护_
+
+---
+
+## 相关主题
+
+- **网络攻击:** [attacks/network-attacks.md](../attacks/network-attacks.md) - 内网渗透 / 域渗透
+- **端点防护:** [endpoint-defense.md](endpoint-defense.md) - EDR / LOLBins 检测
+- **工具:** [tools/nmap-masscan.md](../tools/nmap-masscan.md) - 网络扫描

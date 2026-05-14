@@ -106,3 +106,11 @@ level: critical
 ---
 
 _→ 参见 [`defense/network-defense.md`](network-defense.md) 获取网络层防御_
+
+---
+
+## 相关主题
+
+- **网络防御:** [network-defense.md](network-defense.md) - IDS/IPS / LOLBins 检测
+- **云安全:** [cloud-defense.md](cloud-defense.md) - 云环境端点安全
+- **工具:** [tools/bloodhound-mimikatz.md](../tools/bloodhound-mimikatz.md) - 域渗透工具

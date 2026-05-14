@@ -61,3 +61,11 @@ nmap --script "smb-*" -p 445 <target>
 ---
 
 _→ 参见 [`defense/network-defense.md`](../defense/network-defense.md) 获取 IDS/IPS 检测_
+
+---
+
+## 相关主题
+
+- **网络攻击:** [attacks/network-attacks.md](../attacks/network-attacks.md) - 内网渗透
+- **网络防御:** [defense/network-defense.md](../defense/network-defense.md) - IDS/IPS
+- **速查:** [QUICK-REF.md](../QUICK-REF.md) - 渗透测试检查清单

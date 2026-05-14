@@ -81,3 +81,11 @@
 ---
 
 _→ 能力矩阵详见 [`career/skill-matrix.md`](skill-matrix.md)_
+
+---
+
+## 相关主题
+
+- **能力矩阵:** [skill-matrix.md](skill-matrix.md) - 各领域掌握度评估
+- **速查:** [QUICK-REF.md](../QUICK-REF.md) - 可打印速查手册
+- **知识库导航:** [INDEX.md](../INDEX.md) - 完整知识体系

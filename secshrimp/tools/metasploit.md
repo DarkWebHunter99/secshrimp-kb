@@ -92,3 +92,11 @@ EdrSilencer.exe --unblock-all       # 恢复
 ---
 
 _→ 参见 [`attacks/network-attacks.md`](../attacks/network-attacks.md) 获取横向移动_
+
+---
+
+## 相关主题
+
+- **网络攻击:** [attacks/network-attacks.md](../attacks/network-attacks.md) - 横向移动
+- **云攻击:** [attacks/cloud-attacks.md](../attacks/cloud-attacks.md) - 云环境利用
+- **工具:** [tools/bloodhound-mimikatz.md](bloodhound-mimikatz.md) - 域渗透工具

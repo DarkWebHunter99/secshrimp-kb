@@ -42,3 +42,11 @@
 ---
 
 _→ 参见 [`attacks/web-attacks.md`](../attacks/web-attacks.md) 获取 Web 攻击手法_
+
+---
+
+## 相关主题
+
+- **Web 攻击:** [attacks/web-attacks.md](../attacks/web-attacks.md) - SQLi / XSS / SSRF
+- **Web 防御:** [defense/web-defense.md](../defense/web-defense.md) - 安全头 / 认证
+- **API 攻击:** [attacks/api-cicd-attacks.md](../attacks/api-cicd-attacks.md) - API 安全测试
