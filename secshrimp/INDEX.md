@@ -10,7 +10,7 @@
 
 | 分区 | 目录 | 文件数 | 说明 |
 |------|------|--------|------|
-| 🎯 [攻击面](#攻击面) | `attacks/` | 6 | Web/网络/社工/云/供应链/API/CI-CD/容器/DNS |
+| 🎯 [攻击面](#攻击面) | `attacks/` | 6 | Web/网络/社工/云/供应链/API/CI-CD |
 | 🛡️ [防御面](#防御面) | `defense/` | 4 | Web/网络/端点/云 |
 | 🤖 [AI 安全](#ai-安全) | `ai-security/` | 3 | Prompt Injection / Agent / MCP |
 | 🧰 [工具箱](#工具箱) | `tools/` | 5 | Burp/Nmap/MSF/BloodHound/IDA |
@@ -18,6 +18,87 @@
 | 🚀 [项目实战](#项目实战) | `projects/` | 1 | 恶意下载检测引擎 |
 | 📈 [进化路线](#进化路线) | `career/` | 2 | 学习路线 + 能力矩阵 |
 | ⚡ [速查手册](QUICK-REF.md) | — | 1 | 可打印的一页速查 |
+
+---
+
+## 🛤️ 学习路径
+
+> 从零基础到全栈安全研究员的推荐路径。
+
+### Phase 1: 基础入门（1-2 周）
+
+```
+网络基础 ──→ HTTP 协议 ──→ Web 安全基础 ──→ Linux/Windows 基础
+    │              │              │                │
+    ▼              ▼              ▼                ▼
+  [网络防御]   [Web 防御]    [Web 攻击]      [端点防御]
+```
+
+**必读：**
+- [`attacks/web-attacks.md`](attacks/web-attacks.md) — SQLi / XSS / SSRF 基础
+- [`defense/web-defense.md`](defense/web-defense.md) — 输入验证 / 认证安全
+- [`tools/nmap-masscan.md`](tools/nmap-masscan.md) — Nmap 网络扫描
+- [`QUICK-REF.md`](QUICK-REF.md) — OWASP Top 10 速查
+
+### Phase 2: 渗透实战（2-3 周）
+
+```
+Web 渗透 ──→ 漏洞利用 ──→ 后渗透 ──→ 横向移动
+    │              │            │            │
+    ▼              ▼            ▼            ▼
+ [API 攻击]   [Metasploit]  [提权]     [网络攻击]
+```
+
+**必读：**
+- [`attacks/web-attacks.md`](attacks/web-attacks.md) — 反序列化 / 文件上传 / JWT / 竞争条件
+- [`attacks/api-cicd-attacks.md`](attacks/api-cicd-attacks.md) — BOLA / 批量赋值
+- [`tools/metasploit.md`](tools/metasploit.md) — Metasploit / Sliver C2
+- [`tools/burp-suite.md`](tools/burp-suite.md) — Burp Suite 实战
+
+### Phase 3: 域渗透 & 云安全（3-4 周）
+
+```
+AD 域渗透 ──→ Kerberos 攻击 ──→ 云安全 ──→ 容器安全
+    │              │              │            │
+    ▼              ▼              ▼            ▼
+[网络攻击]   [BloodHound]   [云攻击]    [云防御]
+```
+
+**必读：**
+- [`attacks/network-attacks.md`](attacks/network-attacks.md) — ADCS / Windows 提权 / 域渗透链
+- [`attacks/cloud-attacks.md`](attacks/cloud-attacks.md) — AWS IAM / Docker 逃逸 / K8s
+- [`tools/bloodhound-mimikatz.md`](tools/bloodhound-mimikatz.md) — BloodHound / Rubeus / Certipy
+- [`defense/cloud-defense.md`](defense/cloud-defense.md) — IAM 加固 / K8s 安全
+
+### Phase 4: AI 安全 & 红队（2-3 周）
+
+```
+Prompt Injection ──→ Agent 安全 ──→ MCP 安全 ──→ 红队战术
+       │                │              │              │
+       ▼                ▼              ▼              ▼
+  [AI 安全]       [Agent 安全]    [MCP 安全]    [供应链攻击]
+```
+
+**必读：**
+- [`ai-security/prompt-injection.md`](ai-security/prompt-injection.md) — 直接/间接注入 / 越狱
+- [`ai-security/agent-security.md`](ai-security/agent-security.md) — 工具滥用 / 沙箱逃逸
+- [`ai-security/mcp-security.md`](ai-security/mcp-security.md) — MCP 供应链攻击
+- [`attacks/supply-chain.md`](attacks/supply-chain.md) — 依赖混淆 / CI/CD 投毒
+
+### Phase 5: 高级研究（持续）
+
+```
+漏洞挖掘 ──→ 逆向工程 ──→ 安全开发 ──→ 安全运营
+    │              │            │            │
+    ▼              ▼            ▼            ▼
+[CVE 追踪]    [IDA/Ghidra]  [项目实战]   [安全运营]
+```
+
+**必读：**
+- [`intel/cve-tracker.md`](intel/cve-tracker.md) — 最新高危 CVE
+- [`tools/ida-ghidra.md`](tools/ida-ghidra.md) — 逆向分析 + YARA 规则
+- [`projects/malware-detect-engine.md`](projects/malware-detect-engine.md) — 检测引擎实战
+- [`defense/endpoint-defense.md`](defense/endpoint-defense.md) — EDR / LOLBins 检测
 
 ---
 
@@ -80,52 +161,10 @@
 
 ---
 
-## 🗂️ 知识体系地图
-
-```
-安全虾知识库
-├── 🎯 攻击面 (Offense)
-│   ├── Web 攻击 ─── SQLi / XSS / SSRF / 反序列化 / JWT / 文件上传 / 竞争条件 / GraphQL
-│   ├── 网络攻击 ─── 内网渗透 / 域渗透 / ADCS / Windows 提权 / 无线攻击
-│   ├── 社会工程 ─── 钓鱼 / 语音钓鱼 / 物理安全
-│   ├── 云/容器 ──── AWS IAM 提权 / SSRF→RCE / Docker 逃逸 / K8s 全攻击面
-│   ├── 供应链 ──── 依赖混淆 / Typosquatting / CI/CD 投毒
-│   └── API/CI-CD ── BOLA/IDOR / 批量赋值 / GitHub Actions / Docker 镜像投毒
-│
-├── 🛡️ 防御面 (Defense)
-│   ├── Web 防御 ─── 输入验证 / 认证会话 / API 安全
-│   ├── 网络防御 ─── 分段 / IDS/IPS / DNS 安全
-│   ├── 端点防护 ─── EDR / 白名单 / 补丁管理 / 凭证保护
-│   └── 云安全 ──── IAM 加固 / 运行时监控 / 安全运营
-│
-├── 🤖 AI/LLM 安全
-│   ├── Prompt Injection ── 直接/间接注入 / 越狱 / 编码绕过
-│   ├── Agent 安全 ──────── 工具滥用 / 多 Agent 攻击 / 权限模型
-│   └── MCP 安全 ────────── 供应链攻击 / 服务器注入 / 协议安全
-│
-├── 🧰 工具箱 (Toolbox)
-│   ├── Web 渗透 ─── Burp Suite
-│   ├── 网络扫描 ─── Nmap / Masscan
-│   ├── 漏洞利用 ─── Metasploit
-│   ├── 域渗透 ──── BloodHound / Mimikatz
-│   └── 逆向分析 ─── IDA Pro / Ghidra
-│
-├── 🔬 情报追踪 (Intel)
-│   └── CVE 追踪 ─── 最新高危漏洞分析
-│
-├── 🚀 项目实战 (Projects)
-│   └── 恶意下载检测 ── 终端侧 + 网络侧检测引擎
-│
-└── 📈 进化路线 (Career)
-    ├── 学习路线图 ── 优先级排序 + 资源推荐
-    └── 能力矩阵 ─── 各领域掌握度
-```
-
----
-
 ## ⚡ 快速入口
 
-- **我想学渗透测试** → [`career/roadmap.md`](career/roadmap.md) 看学习路线
+- **我是新手** → 从 [Phase 1 学习路径](#phase-1-基础入门1-2-周) 开始
+- **我想学渗透测试** → [`career/roadmap.md`](career/roadmap.md) 看完整学习路线
 - **我想查某个攻击手法** → [`attacks/`](attacks/) 目录按主题找
 - **我想看最新 CVE** → [`intel/cve-tracker.md`](intel/cve-tracker.md)
 - **我想学用工具** → [`tools/`](tools/) 目录按工具找
